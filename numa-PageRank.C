@@ -31,6 +31,8 @@
 #include <sys/mman.h>
 #include <numa.h>
 
+#include <chrono>
+
 //#include <papi.h>
 #define NUM_EVENTS 3
 
@@ -637,9 +639,16 @@ int parallel_main(int argc, char* argv[]) {
 	PageRank(G, maxIter);
 	//G.del(); 
     } else {
+        const auto start = chrono::system_clock::now();
 	graph<asymmetricVertex> G = 
 	    readGraph<asymmetricVertex>(iFile,symmetric,binary);
+        const auto mid = chrono::system_clock::now();
 	PageRank(G, maxIter);
+        const auto end = chrono::system_clock::now();
+        chrono::duration<double> prepro = mid - start;
+        chrono::duration<double> pr = end - mid;
+        cout << prepro << endl;
+        cout << pr << endl;
 	//G.del();
     }
     return 0;
