@@ -33,6 +33,7 @@
 
 #include <sched.h>
 #include <chrono>
+#include <sys/syscall.h>
 
 //#include <papi.h>
 #define NUM_EVENTS 3
@@ -244,6 +245,13 @@ void *PageRankSubWorker(void *arg) {
     int tid = my_arg->tid;
     int subTid = my_arg->subTid;
 
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    int P_CORES_PER_NODE = CORES_PER_NODE / 2;
+    int offset = subTid < P_CORES_PER_NODE ? 0 : (numOfNode - 1) * P_CORES_PER_NODE;
+    int core = tid * P_CORES_PER_NODE + subTid + offset;
+    CPU_SET(core, &cpuset);
+    sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
     cout << "On " + to_string(sched_getcpu()) << endl;
 
     pthread_barrier_t *local_barr = my_arg->node_barr;
