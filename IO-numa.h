@@ -200,13 +200,17 @@ graph <vertex> readGraphFromFile(char *fname, bool isSymmetric) {
         }
     }
 
+    parallel_for (long i = 0; i < n; i++) {
+        auto edges = std::get<0>(listed_in_edges[i]);
+        std::sort(edges.begin(), edges.end());
+        v[i].setInDegree(edges.size());
+    }
+
     long offset = 0;
     for (long i = 0; i < n; i++) {
         auto edges = std::get<0>(listed_in_edges[i]);
         auto size = edges.size();
-        v[i].setInDegree(size);
         v[i].setInNeighbors(in_gap_edges.data() + offset);
-        std::sort(edges.begin(), edges.end());
         long prev = 0;
         for (int j = 0; j < size; j++) {
             in_gap_edges[offset + j] = edges[j] - prev;
@@ -215,7 +219,7 @@ graph <vertex> readGraphFromFile(char *fname, bool isSymmetric) {
         offset += size;
     }
 
-    //TODO: make all edge storage std::vector<std::vector<intE>> (?)
+    // TODO: make all edge storage std::vector<std::vector<intE>> (?)
 
     return graph<vertex>(v, (intT) n, m, out_gap_edges.data(), in_gap_edges.data());
 }
