@@ -254,13 +254,13 @@ void *PageRankSubWorker(void *arg) {
     int tid = my_arg->tid;
     int subTid = my_arg->subTid;
 
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    int P_CORES_PER_NODE = CORES_PER_NODE / 2;
-    int offset = subTid < P_CORES_PER_NODE ? 0 : (numOfNode - 1) * P_CORES_PER_NODE;
-    int core = tid * P_CORES_PER_NODE + subTid + offset;
-    CPU_SET(core, &cpuset);
-    sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
+//    cpu_set_t cpuset;
+//    CPU_ZERO(&cpuset);
+//    int P_CORES_PER_NODE = CORES_PER_NODE / 2;
+//    int offset = subTid < P_CORES_PER_NODE ? 0 : (numOfNode - 1) * P_CORES_PER_NODE;
+//    int core = tid * P_CORES_PER_NODE + subTid + offset;
+//    CPU_SET(core, &cpuset);
+//    sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
 
     cerr << "On " + to_string(sched_getcpu()) + "\n";
 
@@ -577,9 +577,9 @@ struct PR_Hash_F {
 
 template<class vertex>
 void PageRank(graph<vertex> &GA, int maxIter) {
-//    numOfNode = numa_num_configured_nodes();
+    numOfNode = numa_num_configured_nodes();
     vPerNode = GA.n / numOfNode;
-//    CORES_PER_NODE = numa_num_configured_cpus() / numOfNode;
+    CORES_PER_NODE = numa_num_configured_cpus() / numOfNode;
     if (NODE_USED != -1)
         numOfNode = NODE_USED;
     pthread_barrier_init(&barr, NULL, numOfNode);
@@ -656,8 +656,8 @@ int parallel_main(int argc, char *argv[]) {
 
     iFile = argv[1];
     maxIter = atoi(argv[2]);
-    numOfNode = atoi(argv[3]);
-    CORES_PER_NODE = atoi(argv[4]);
+//    numOfNode = atoi(argv[3]);
+//    CORES_PER_NODE = atoi(argv[4]);
 
 //    if (argc > 3) NODE_USED = atoi(argv[3]);
 //    if (argc > 4) if ((string) argv[4] == (string) "-result") needResult = true;
