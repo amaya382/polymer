@@ -31,6 +31,7 @@
 #include <sys/mman.h>
 #include <numa.h>
 
+#include <sched.h>
 #include <chrono>
 
 //#include <papi.h>
@@ -242,6 +243,9 @@ void *PageRankSubWorker(void *arg) {
     int maxIter = my_arg->maxIter;
     int tid = my_arg->tid;
     int subTid = my_arg->subTid;
+
+    cout << "On " + to_string(sched_getcpu()) << endl;
+
     pthread_barrier_t *local_barr = my_arg->node_barr;
     LocalFrontier *output = my_arg->localFrontier;
 
