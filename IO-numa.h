@@ -33,6 +33,9 @@
 #include <stdlib.h>
 #include "parallel.h"
 #include "quickSort.h"
+
+#include <vector>
+
 using namespace std;
 
 typedef pair<uintE,uintE> intPair;
@@ -126,8 +129,10 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric) {
     abort();
   }
 
-  intT* offsets = newA(intT,n);
-  intE* edges = newA(intE,m);
+//  intT* offsets = newA(intT,n);
+//  intE* edges = newA(intE,m);
+  std::vector<intT> offsets(n);
+  std::vector<intE> edges(m);
 
   {parallel_for(long i=0; i < n; i++) offsets[i] = atol(W.Strings[i + 3]);}
   {parallel_for(long i=0; i<m; i++) edges[i] = atol(W.Strings[i+n+3]); }
@@ -139,7 +144,7 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric) {
     uintT o = offsets[i];
     uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
     v[i].setOutDegree(l); 
-    v[i].setOutNeighbors(edges+o);     
+    v[i].setOutNeighbors(edges.data()+o);
     }}
 
   if(!isSymmetric) {
@@ -153,7 +158,7 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric) {
 	temp[o+j] = make_pair(v[i].getOutNeighbor(j),i);
       }
       }}
-    free(offsets);
+//    free(offsets);
 
     quickSort(temp,m,pairFirstCmp<intE>());
  
@@ -180,12 +185,12 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric) {
       }}    
 
     free(tOffsets);
-    return graph<vertex>(v,(intT)n,m,edges,inEdges);
+    return graph<vertex>(v,(intT)n,m,edges.data(),inEdges);
   }
 
   else {
-    free(offsets);
-    return graph<vertex>(v,(intT)n,m,edges);
+//    free(offsets);
+    return graph<vertex>(v,(intT)n,m,edges.data());
   }
 }
 
