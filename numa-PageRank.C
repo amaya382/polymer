@@ -332,7 +332,7 @@ void *PageRankSubWorker(void *arg) {
             double time1 = ((double) startT.tv_sec) + ((double) startT.tv_usec) / 1000000.0;
             double time2 = ((double) endT.tv_sec) + ((double) endT.tv_usec) / 1000000.0;
             double duration = time2 - time1;
-            printf("time of %d: %lf\n", subworker.tid * CORES_PER_NODE + subworker.subTid, duration);
+            printf("time of %d: %lf on %d\n", subworker.tid * CORES_PER_NODE + subworker.subTid, duration,  to_string(sched_getcpu()));
         }
 
         output->isDense = true;
