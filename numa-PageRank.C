@@ -361,7 +361,7 @@ void *PageRankSubWorker(void *arg) {
     const auto end0 = chrono::system_clock::now();
     chrono::duration<double> elapsed = end0 - start0;
 
-    if(tid < 2 && subTid == 0 && currIter == 1) {
+    if(tid < 2 && subTid == 0) {
         cout << "tid: " + to_string(tid) + ", " + to_string(elapsed.count()) + "\n";
     }
 
