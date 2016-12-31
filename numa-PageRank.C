@@ -287,6 +287,8 @@ void *PageRankSubWorker(void *arg) {
     pthread_barrier_wait(local_barr);
     pthread_barrier_wait(&global_barr);
 
+    const auto start = chrono::system_clock::now();
+
     while(1) {
 	if (maxIter > 0 && currIter >= maxIter)
             break;
@@ -355,6 +357,14 @@ void *PageRankSubWorker(void *arg) {
 	p_ans = p_curr;
     }
     pthread_barrier_wait(local_barr);
+
+    const auto end = chrono::system_clock::now();
+    chrono::duration<double> elapsed = end - start;
+
+    if(tid < 2 && subTid == 0 && currIter == 1) {
+        cout << "tid: " + to_string(tid) + ", " + to_string(elapsed.count()) + "\n";
+    }
+
     return NULL;
 }
 
