@@ -233,6 +233,12 @@ bool* edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
 	    }
 	}
     }
+
+    auto thread = sched_getcpu();
+    if(thread == 0 || thread == 36 || thread == 72 || thread == 108) {
+        cout << to_string(thread) + ": " + to_string(m) + "\n";
+    }
+
     return NULL;
 }
 
