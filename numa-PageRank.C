@@ -219,13 +219,8 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         currOffset = frontier->getOffset(currNodeNum);
     }
 
-    long switched = 0;
     for (long i = startPos; i < endPos; i++) {
         if (i == nextSwitchPoint) {
-            if (thread == 0 || thread == 36 || thread == 72 || thread == 108) {
-                switched++;
-            }
-
             currOffset += frontier->getSize(currNodeNum);
             nextSwitchPoint += frontier->getSize(currNodeNum + 1);
             currNodeNum++;
@@ -254,9 +249,17 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
 
     const auto t1 = chrono::system_clock::now();
 
+    long acc = 0;
+    for(long i = startPos; i < endPos; i++){
+        acc += G[i].getFakeDegree();
+    }
+
+    const auto t2 = chrono::system_clock::now();
+
     if (thread == 0 || thread == 36 || thread == 72 || thread == 108) {
         chrono::duration<double> d0 = t1 - t0;
-        cout << to_string(thread) + ": " + to_string(switched) + ", " + to_string(d0.count()) + "\n";
+        chrono::duration<double> d1 = t2 - t1;
+        cout << to_string(endPos - startPos) + ": " + to_string(d0.count()) + ", " + to_string(d1.count()) + "\n";
     }
 
     return NULL;
@@ -352,8 +355,8 @@ void *PageRankSubWorker(void *arg) {
             double time3 = ((double) endT.tv_sec) + ((double) endT.tv_usec) / 1000000.0;
             double duration0 = time2 - time1;
             double duration1 = time3 - time2;
-            printf("time of %d: %lf-%lf on %d, %d, %d, %d, %d\n", subworker.tid * CORES_PER_NODE + subworker.subTid,
-                   duration0, duration1, sched_getcpu(), rangeLow, rangeHi, subworker.dense_start, subworker.dense_end);
+//            printf("time of %d: %lf-%lf on %d, %d, %d, %d, %d\n", subworker.tid * CORES_PER_NODE + subworker.subTid,
+//                   duration0, duration1, sched_getcpu(), rangeLow, rangeHi, subworker.dense_start, subworker.dense_end);
         }
 
         output->isDense = true;
