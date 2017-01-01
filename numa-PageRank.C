@@ -319,20 +319,23 @@ void *PageRankSubWorker(void *arg) {
         //edgeMapDenseReduce(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output,false,subworker);
 
         subworker.localWait();
-        struct timeval startT, endT;
+        struct timeval startT, midT, endT;
         struct timezone tz = {0, 0};
         gettimeofday(&startT, &tz);
         //edgeMapDenseForward(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, true, subworker.dense_start, subworker.dense_end);
         edgeMapDenseForwardOTHER(GA, Frontier, PR_F<vertex>(p_curr, p_next, GA.V, rangeLow, rangeHi), output, true,
                                  subworker.dense_start, subworker.dense_end);
         //edgeMapDenseForwardDynamic(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, subworker);
+        gettimeofday(&midT, &tz);
         subworker.localWait();
         gettimeofday(&endT, &tz);
         if (subworker.isSubMaster()) {
             double time1 = ((double) startT.tv_sec) + ((double) startT.tv_usec) / 1000000.0;
-            double time2 = ((double) endT.tv_sec) + ((double) endT.tv_usec) / 1000000.0;
-            double duration = time2 - time1;
-            printf("time of %d: %lf on %d, %d, %d, %d, %d\n", subworker.tid * CORES_PER_NODE + subworker.subTid, duration, sched_getcpu(), rangeLow, rangeHi, subworker.dense_start, subworker.dense_end);
+            double time2 = ((double) midT.tv_sec) + ((double) midT.tv_usec) / 1000000.0;
+            double time3 = ((double) endT.tv_sec) + ((double) endT.tv_usec) / 1000000.0;
+            double duration0 = time2 - time1;
+            double duration1 = time3 - time2;
+            printf("time of %d: %lf-%lf on %d, %d, %d, %d, %d\n", subworker.tid * CORES_PER_NODE + subworker.subTid, duration0, duration1, sched_getcpu(), rangeLow, rangeHi, subworker.dense_start, subworker.dense_end);
         }
 
         output->isDense = true;
