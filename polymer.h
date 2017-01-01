@@ -473,10 +473,11 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             intE *localEdges = &edges[offsets[i]];
             intT counter = 0;
             intT d = V[i].getOutDegree();
+            intT out_ngh = 0;
             for (intT j = 0; j < d; j++) {
-                intT ngh = V[i].getOutNeighbor(j);
-                if (rangeLow <= ngh && ngh < rangeHi) {
-                    localEdges[counter] = ngh;
+                out_ngh += V[i].getOutNeighbor(j);
+                if (rangeLow <= out_ngh && out_ngh < rangeHi) {
+                    localEdges[counter] = out_ngh;
                     counter++;
                 }
             }
@@ -487,10 +488,11 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             intE *localInEdges = &inEdges[inOffsets[i]];
             counter = 0;
             d = V[i].getInDegree();
+            intT in_ngh = 0;
             for (intT j = 0; j < d; j++) {
-                intT ngh = V[i].getInNeighbor(j);
-                if (rangeLow <= ngh && ngh < rangeHi) {
-                    localInEdges[counter] = ngh;
+                in_ngh += V[i].getInNeighbor(j);
+                if (rangeLow <= in_ngh && in_ngh < rangeHi) {
+                    localInEdges[counter] = in_ngh;
                     counter++;
                 }
             }
