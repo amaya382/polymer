@@ -218,10 +218,13 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         currOffset = frontier->getOffset(currNodeNum);
     }
 
-    const auto t1 = chrono::system_clock::now();
-
+    long switched = 0;
     for (long i = startPos; i < endPos; i++) {
         if (i == nextSwitchPoint) {
+            if (thread == 0 || thread == 36 || thread == 72 || thread == 108) {
+                switched++;
+            }
+
             currOffset += frontier->getSize(currNodeNum);
             nextSwitchPoint += frontier->getSize(currNodeNum + 1);
             currNodeNum++;
@@ -248,14 +251,12 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         }
     }
 
-    const auto t2 = chrono::system_clock::now();
+    const auto t1 = chrono::system_clock::now();
 
     auto thread = sched_getcpu();
     if (thread == 0 || thread == 36 || thread == 72 || thread == 108) {
         chrono::duration<double> d0 = t1 - t0;
-        chrono::duration<double> d1 = t2 - t1;
-        cout << to_string(thread) + ": "
-                + to_string(d0.count()) + ", " + to_string(d1.count()) + "\n";
+        cout << to_string(thread) + ": " + to_string(switched) + ", " + to_string(d0.count()) + "\n";
     }
 
     return NULL;
