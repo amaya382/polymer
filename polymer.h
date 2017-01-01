@@ -415,6 +415,7 @@ graph<vertex> graphFilter(graph<vertex> &GA, int rangeLow, int rangeHi, bool use
     return graph<vertex>(newVertexSet, GA.n, GA.m);
 }
 
+// create local graph (repack edges only in current node)
 template<class vertex>
 graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi) {
     vertex *V = GA.V;
@@ -474,10 +475,12 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             intT counter = 0;
             intT d = V[i].getOutDegree();
             intT out_ngh = 0;
+            intT new_out_ngh = 0;
             for (intT j = 0; j < d; j++) {
                 out_ngh += V[i].getOutNeighbor(j);
                 if (rangeLow <= out_ngh && out_ngh < rangeHi) {
-                    localEdges[counter] = out_ngh;
+                    localEdges[counter] = out_ngh - new_out_ngh;
+                    new_out_ngh = out_ngh;
                     counter++;
                 }
             }
@@ -489,10 +492,12 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             counter = 0;
             d = V[i].getInDegree();
             intT in_ngh = 0;
+            intT new_in_ngh = 0;
             for (intT j = 0; j < d; j++) {
                 in_ngh += V[i].getInNeighbor(j);
                 if (rangeLow <= in_ngh && in_ngh < rangeHi) {
-                    localInEdges[counter] = in_ngh;
+                    localInEdges[counter] = in_ngh - new_in_ngh;
+                    new_in_ngh = in_ngh;
                     counter++;
                 }
             }
