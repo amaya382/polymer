@@ -204,9 +204,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
     intT outEdgesCount = 0;
     bool *nextB = next->b;
 
-    auto thread = sched_getcpu();
-    const auto t0 = chrono::system_clock::now();
-
     int startPos = 0;
     int endPos = numVertices;
     if (part) {
@@ -246,22 +243,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
             }
         }
     }
-
-    const auto t1 = chrono::system_clock::now();
-
-    long acc = 0;
-    for(long i = startPos; i < endPos; i++){
-        acc += G[i].getOutDegree();
-    }
-
-    const auto t2 = chrono::system_clock::now();
-
-    if (thread == 0 || thread == 36 || thread == 72 || thread == 108) {
-        chrono::duration<double> d0 = t1 - t0;
-        chrono::duration<double> d1 = t2 - t1;
-        cout << to_string(thread) + ": " + to_string(endPos - startPos) + ", " + to_string(m) + ", " + to_string(acc) + ", " + to_string(d0.count()) + ", " + to_string(d1.count()) + "\n";
-    }
-
     return NULL;
 }
 
@@ -282,7 +263,7 @@ void *PageRankSubWorker(void *arg) {
     CPU_SET(core, &cpuset);
     sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
 
-    cerr << "On " + to_string(sched_getcpu()) + ", #v=" + to_string(GA.n) + "\n";
+    cerr << "On " + to_string(sched_getcpu()) + "\n";
 
     pthread_barrier_t *local_barr = my_arg->node_barr;
     LocalFrontier *output = my_arg->localFrontier;
@@ -316,8 +297,6 @@ void *PageRankSubWorker(void *arg) {
 
     pthread_barrier_wait(local_barr);
     pthread_barrier_wait(&global_barr);
-
-    const auto start0 = chrono::system_clock::now();
 
     while (1) {
         if (maxIter > 0 && currIter >= maxIter)
@@ -392,13 +371,6 @@ void *PageRankSubWorker(void *arg) {
         p_ans = p_curr;
     }
     pthread_barrier_wait(local_barr);
-
-    const auto end0 = chrono::system_clock::now();
-    chrono::duration<double> elapsed = end0 - start0;
-
-    if (tid < 2 && subTid == 0) {
-        cout << "tid: " + to_string(tid) + ", " + to_string(elapsed.count()) + "\n";
-    }
 
     return NULL;
 }
