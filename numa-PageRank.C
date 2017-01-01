@@ -251,7 +251,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
 
     long acc = 0;
     for(long i = startPos; i < endPos; i++){
-        acc += G[i].getFakeDegree();
+        acc += G[i].getOutDegree();
     }
 
     const auto t2 = chrono::system_clock::now();
@@ -259,7 +259,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
     if (thread == 0 || thread == 36 || thread == 72 || thread == 108) {
         chrono::duration<double> d0 = t1 - t0;
         chrono::duration<double> d1 = t2 - t1;
-        cout << to_string(thread) + ": " + to_string(endPos - startPos) + ", " + to_string(acc) + ", " + to_string(d0.count()) + ", " + to_string(d1.count()) + "\n";
+        cout << to_string(thread) + ": " + to_string(endPos - startPos) + ", " + to_string(m) + ", " + to_string(acc) + ", " + to_string(d0.count()) + ", " + to_string(d1.count()) + "\n";
     }
 
     return NULL;
