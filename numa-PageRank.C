@@ -234,9 +234,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
             uintT ngh = 0;
             for (intT j = 0; j < d; j++) {
                 ngh += G[i].getOutNeighbor(j);
-
-                cout << to_string(i) + ", " + to_string(ngh) + ", " + to_string(d) + "\n";
-
                 if (/*next->inRange(ngh) &&*/ f.cond(ngh) && f.updateValVer(i, val, ngh)) {
                     /*
                     if (!next->getBit(ngh)) {
