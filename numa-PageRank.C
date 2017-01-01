@@ -204,6 +204,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
     intT outEdgesCount = 0;
     bool *nextB = next->b;
 
+    auto thread = sched_getcpu();
     const auto t0 = chrono::system_clock::now();
 
     int startPos = 0;
@@ -253,7 +254,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
 
     const auto t1 = chrono::system_clock::now();
 
-    auto thread = sched_getcpu();
     if (thread == 0 || thread == 36 || thread == 72 || thread == 108) {
         chrono::duration<double> d0 = t1 - t0;
         cout << to_string(thread) + ": " + to_string(switched) + ", " + to_string(d0.count()) + "\n";
