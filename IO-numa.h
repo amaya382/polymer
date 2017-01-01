@@ -175,7 +175,7 @@ graph <vertex> readGraphFromFile(char *fname, bool isSymmetric) {
         }
 
         v[i].setOutDegree(degree);
-        v[i].setFakeDegree(degree);
+//        v[i].setFakeDegree(degree);
         v[i].setOutNeighbors(out_gap_edges.data() + offset);
         for (long j = offset + 1; j < upper; j++) {
             out_gap_edges[j] = get_and_memo_edge(j) - out_edges[j - 1];

@@ -430,18 +430,20 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
 
             intT d = V[i].getOutDegree();
             counters[i] = 0;
+            intT out_ngh = 0;
             for (intT j = 0; j < d; j++) {
-                intT ngh = V[i].getOutNeighbor(j);
-                if (rangeLow <= ngh && ngh < rangeHi)
+                out_ngh += V[i].getOutNeighbor(j);
+                if (rangeLow <= out_ngh && out_ngh < rangeHi)
                     counters[i]++;
             }
             newVertexSet[i].setFakeDegree(counters[i]);
 
             d = V[i].getInDegree();
             inCounters[i] = 0;
+            intT in_ngh = 0;
             for (intT j = 0; j < d; j++) {
-                intT ngh = V[i].getInNeighbor(j);
-                if (rangeLow <= ngh && ngh < rangeHi)
+                in_ngh += V[i].getInNeighbor(j);
+                if (rangeLow <= in_ngh && in_ngh < rangeHi)
                     inCounters[i]++;
             }
             newVertexSet[i].setFakeDegree(counters[i]);
