@@ -282,7 +282,7 @@ void *PageRankSubWorker(void *arg) {
     CPU_SET(core, &cpuset);
     sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
 
-    cerr << "On " + to_string(sched_getcpu()) + "\n";
+    cerr << "On " + to_string(sched_getcpu()) + ", #v=" + to_string(GA.n) + "\n";
 
     pthread_barrier_t *local_barr = my_arg->node_barr;
     LocalFrontier *output = my_arg->localFrontier;
