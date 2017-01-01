@@ -90,6 +90,7 @@ struct PR_F {
     }
 
     inline bool updateValVer(intT s, double val, intT d) {
+        cout << to_string(s) + ", " + to_string(val) + ", " + to_string(d) + "\n";
         writeAdd(&p_next[d], val / V[s].getOutDegree());
         return true;
     }
