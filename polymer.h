@@ -519,7 +519,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             }
         }
         uint64_t out_used = encode0<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
-        newVertexSet[i].setOutNeighbors((intE *)&out_edges[out_consumed]);
+        newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
         out_consumed += out_used;
 
         intT in_degree = V[i].getInDegree();

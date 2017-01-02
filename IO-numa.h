@@ -164,7 +164,7 @@ graph <vertex> readGraphFromFile(char *fname, bool isSymmetric) {
     auto get_and_memo_edge = [&](intE i) {
         return out_edges[i] = atol(W.Strings[skip_lines + n + i]);
     };
-    parallel_for (long i = 0; i < n; i++) {
+    parallel_for (long i = 0; i < n - 1; i++) {
         auto offset = out_offsets[i];
         auto upper = out_offsets[i + 1];
         auto degree = upper - offset;
