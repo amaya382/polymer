@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include "parallel.h"
 
+#include <vector>
+#include <cstring>
+
 using namespace std;
 
 // **************************************************************
@@ -49,107 +52,8 @@ struct symmetricVertex {
     void flipEdges() {}
 };
 
-
-#include <vector>
-#include <cstring>
-#include <bitset>
 template<typename uint_t>
-uint64_t encode(vector <uint_t> &in, vector <uint8_t> &out) {
-    // out[0..n_chunks-1] are reserved for flags
-    // out[n_chunks..] are used to store compressed data
-    uint64_t size = in.size();
-    uint64_t n_chunks = (size + 3) / 4;
-    uint64_t used = n_chunks;
-
-    for (uint64_t i = 0; i < n_chunks; i++) {
-        bitset<8> flags;
-        uint64_t block = i * 4;
-        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
-            if (in[block + j] <= 0xFF) {
-                memcpy(&out[used], &in[block + j], 1);
-                used++;
-            } else if (in[block + j] <= 0xFFFF) {
-                memcpy(&out[used], &in[block + j], 2);
-                used += 2;
-                flags = 1 << (3 - j) * 2;
-            } else if (in[block + j] <= 0xFFFFFF) {
-                memcpy(&out[used], &in[block + j], 4);
-                used += 4;
-                flags = 2 << (3 - j) * 2;
-            } else {
-                memcpy(&out[used], &in[block + j], 8);
-                used += 8;
-                flags = 3 << (3 - j) * 2;
-            }
-        }
-        out[i] = static_cast<uint8_t>(flags.to_ulong());
-    }
-
-    return used; // byte
-}
-
-template<typename uint_t>
-void decode(vector <uint8_t> &in, uint64_t size, vector <uint_t> &out) {
-    uint64_t n_chunks = (size + 3) / 4;
-    uint64_t used = n_chunks;
-
-    for (uint64_t i = 0; i < n_chunks; i++) {
-        uint64_t block = i * 4;
-        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
-            switch (in[i] >> (3 - j) * 2 & 0b00000011) {
-                case 0:
-                    memcpy(&out[block + j], &in[used], 1);
-                    used++;
-                    break;
-                case 1:
-                    memcpy(&out[block + j], &in[used], 2);
-                    used += 2;
-                    break;
-                case 2:
-                    memcpy(&out[block + j], &in[used], 4);
-                    used += 4;
-                    break;
-                case 3:
-                    memcpy(&out[block + j], &in[used], 8);
-                    used += 8;
-                    break;
-            }
-        }
-    }
-}
-
-template<typename uint_t>
-void decode0(uint8_t *in, uint64_t size, uint_t *out) {
-    uint64_t n_chunks = (size + 3) / 4;
-    uint64_t used = n_chunks;
-
-    for (uint64_t i = 0; i < n_chunks; i++) {
-        uint64_t block = i * 4;
-        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
-            switch (in[i] >> (3 - j) * 2 & 0b00000011) {
-                case 0:
-                    memcpy(&out[block + j], &in[used], 1);
-                    used++;
-                    break;
-                case 1:
-                    memcpy(&out[block + j], &in[used], 2);
-                    used += 2;
-                    break;
-                case 2:
-                    memcpy(&out[block + j], &in[used], 4);
-                    used += 4;
-                    break;
-                case 3:
-                    memcpy(&out[block + j], &in[used], 8);
-                    used += 8;
-                    break;
-            }
-        }
-    }
-}
-
-template<typename uint_t>
-void decode1(uint8_t *in, uint64_t size, vector<uint_t> &out) {
+void decode(uint8_t *in, uint64_t size, vector<uint_t> &out) {
     uint64_t n_chunks = (size + 3) / 4;
     uint64_t used = n_chunks;
 
@@ -212,16 +116,13 @@ struct asymmetricVertex {
         swap(inDegree, outDegree);
     }
 
-//    vector<uint8_t> in;
-//    vector<uint8_t> out;
-
-    void getOutNgh(vector<uintE> &data,uint64_t size){ decode1<uintE>(out,size,data);}
+    void getOutNgh(vector<uintE> &data,uint64_t size){ decode<uintE>(out,size,data);}
     void setOutNeighbors(uint8_t *_i) { out = _i; }
     void setInNeighbors(uint8_t *_i) { in = _i; }
 
 //    void setOutNgh(vector<uintE> &data){encode<uintE>(data,out);}
-//    uint64_t setOutNgh(uintE *data, uint64_t size){return decode0<uintE>(out, size, data);}
-//    void getOutNgh(uintE *data, uint64_t size){encode0<uintE>(data, size, out);}
+//    uint64_t setOutNgh(uintE *data, uint64_t size){return decode<uintE>(out, size, data);}
+//    void getOutNgh(uintE *data, uint64_t size){encode<uintE>(data, size, out);}
 };
 
 template<class vertex>

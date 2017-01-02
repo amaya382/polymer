@@ -42,7 +42,6 @@
 #include <pthread.h>
 
 #include <algorithm>
-#include <bitset>
 
 using namespace std;
 
@@ -419,14 +418,14 @@ graph<vertex> graphFilter(graph<vertex> &GA, int rangeLow, int rangeHi, bool use
 }
 
 template<typename uint_t>
-uint64_t encode0(uint_t *in, uint64_t size, uint8_t *out) {
+uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     // out[0..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
     uint64_t n_chunks = (size + 3) / 4;
     uint64_t used = n_chunks;
 
     for (uint64_t i = 0; i < n_chunks; i++) {
-        bitset<8> flags;
+        uint8_t flags = 0b00000000;
         uint64_t block = i * 4;
         for (uint8_t j = 0; j < 4 && block + j < size; j++) {
             if (in[block + j] <= 0xFF) {
@@ -435,18 +434,18 @@ uint64_t encode0(uint_t *in, uint64_t size, uint8_t *out) {
             } else if (in[block + j] <= 0xFFFF) {
                 memcpy(&out[used], &in[block + j], 2);
                 used += 2;
-                flags = 1 << (3 - j) * 2;
+                flags |= 0b00000001 << (3 - j) * 2;
             } else if (in[block + j] <= 0xFFFFFF) {
                 memcpy(&out[used], &in[block + j], 4);
                 used += 4;
-                flags = 2 << (3 - j) * 2;
+                flags |= 0b00000010 << (3 - j) * 2;
             } else {
                 memcpy(&out[used], &in[block + j], 8);
                 used += 8;
-                flags = 3 << (3 - j) * 2;
+                flags |= 0b00000011 << (3 - j) * 2;
             }
         }
-        out[i] = static_cast<uint8_t>(flags.to_ulong());
+        out[i] = flags;
     }
 
     return used; // byte
@@ -518,29 +517,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 prev_out_ngh = curr_out_ngh;
             }
         }
-
-        if(i % 100000 == 0){
-            uint8_t *edges = (uint8_t *) numa_alloc_local(sizeof(intE) * out_counter);
-            uint64_t used = encode0<uintE>(out_buf, out_counter, edges);
-            string str = "";
-            uint64_t prev = 0;
-            for(intT j = 0; j < out_counter; j++) {
-                prev += out_buf[j];
-                str += to_string(prev) + ", ";
-            }
-            str += "\n";
-            for(intT k = 0; k < used; k++){
-                str += "|";
-                bitset<8> bs(edges[k]);
-                for(uint8_t l = 0; l < 8; l++){
-                    str += to_string(bs[l]);
-                }
-            }
-            cout << to_string(i) + "\n" + str + "\n";
-            numa_free(edges, sizeof(intE) * out_counter);
-        }
-
-        uint64_t out_used = encode0<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
+        uint64_t out_used = encode<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
         newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
         out_consumed += out_used;
 
@@ -555,7 +532,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 prev_in_ngh = curr_in_ngh;
             }
         }
-        uint64_t in_used = encode0<uintE>(in_buf, in_counter, &in_edges[in_consumed]);
+        uint64_t in_used = encode<uintE>(in_buf, in_counter, &in_edges[in_consumed]);
         newVertexSet[i].setInNeighbors(&in_edges[in_consumed]);
         in_consumed += in_used;
     }
