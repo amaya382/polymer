@@ -518,21 +518,26 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 prev_out_ngh = curr_out_ngh;
             }
         }
-        for(intT j = 0; j < out_counter; j++){
-            if(i % 10000 == 0){
-                uint8_t *edges = (uint8_t *) numa_alloc_local(sizeof(intE) * out_counter);
-                uint64_t used = encode0<uintE>(out_buf, out_counter, edges);
-                string str = "";
-                for(intT k = 0; k < used; k++){
-                    str += "|";
-                    bitset<8> bs(edges[k]);
-                    for(uint8_t l = 0; l < 8; l++){
-                        str += to_string(bs[l]);
-                    }
-                }
-                cout << to_string(i) + "\n" + to_string(out_buf[j]) + "\n" + str + "\n";
+
+        if(i % 10000 == 0){
+            uint8_t *edges = (uint8_t *) numa_alloc_local(sizeof(intE) * out_counter);
+            uint64_t used = encode0<uintE>(out_buf, out_counter, edges);
+            string str = "";
+            for(intT j = 0; j < out_counter; j++) {
+                str += to_string(out_buf[j]) + ", ";
             }
+            str += "\n";
+            for(intT k = 0; k < used; k++){
+                str += "|";
+                bitset<8> bs(edges[k]);
+                for(uint8_t l = 0; l < 8; l++){
+                    str += to_string(bs[l]);
+                }
+            }
+            cout << to_string(i) + "\n" + str + "\n";
+            numa_free(edges, sizeof(intE) * out_counter);
         }
+
         uint64_t out_used = encode0<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
         newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
         out_consumed += out_used;
