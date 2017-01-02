@@ -153,36 +153,6 @@ void decode(vector <uint8_t> &in, uint64_t size, vector <uint_t> &out) {
 }
 
 template<typename uint_t>
-void decode0(uint8_t *in, uint64_t size, uint_t *out) {
-    uint64_t n_chunks = (size + 3) / 4;
-    uint64_t used = n_chunks;
-
-    for (uint64_t i = 0; i < n_chunks; i++) {
-        uint64_t block = i * 4;
-        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
-            switch (in[i] >> (3 - j) * 2 & 0b00000011) {
-                case 0:
-                    memcpy(&out[block + j], &in[used], 1);
-                    used++;
-                    break;
-                case 1:
-                    memcpy(&out[block + j], &in[used], 2);
-                    used += 2;
-                    break;
-                case 2:
-                    memcpy(&out[block + j], &in[used], 4);
-                    used += 4;
-                    break;
-                case 3:
-                    memcpy(&out[block + j], &in[used], 8);
-                    used += 8;
-                    break;
-            }
-        }
-    }
-}
-
-template<typename uint_t>
 void decode1(uint8_t *in, uint64_t size, vector<uint_t> &out) {
     uint64_t n_chunks = (size + 3) / 4;
     uint64_t used = n_chunks;
@@ -266,6 +236,7 @@ struct asymmetricVertex {
 
     void getOutNgh(vector<uintE> &data,uint64_t size){ decode1<uintE>(out,size,data);}
     void setOutNeighbors(uint8_t *_i) { out = _i; }
+    void setInNeighbors(uint8_t *_i) { in = _i; }
 
 //    void setOutNgh(vector<uintE> &data){encode<uintE>(data,out);}
 //    uint64_t setOutNgh(uintE *data, uint64_t size){return decode0<uintE>(out, size, data);}

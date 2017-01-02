@@ -452,36 +452,6 @@ uint64_t encode0(uint_t *in, uint64_t size, uint8_t *out) {
     return used; // byte
 }
 
-template<typename uint_t>
-void decode0(uint8_t *in, uint64_t size, uint_t *out) {
-    uint64_t n_chunks = (size + 3) / 4;
-    uint64_t used = n_chunks;
-
-    for (uint64_t i = 0; i < n_chunks; i++) {
-        uint64_t block = i * 4;
-        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
-            switch (in[i] >> (3 - j) * 2 & 0b00000011) {
-                case 0:
-                    memcpy(&out[block + j], &in[used], 1);
-                    used++;
-                    break;
-                case 1:
-                    memcpy(&out[block + j], &in[used], 2);
-                    used += 2;
-                    break;
-                case 2:
-                    memcpy(&out[block + j], &in[used], 4);
-                    used += 4;
-                    break;
-                case 3:
-                    memcpy(&out[block + j], &in[used], 8);
-                    used += 8;
-                    break;
-            }
-        }
-    }
-}
-
 // create local graph (repack edges only in current node)
 template<class vertex>
 graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi) {
@@ -515,6 +485,13 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             newVertexSet[i].setFakeDegree(counters[i]);
             newVertexSet[i].setFakeInDegree(inCounters[i]);
         }
+    }
+
+    intT totalSize = 0;
+    intT totalInSize = 0;
+    for (intT i = 0; i < GA.n; i++) {
+        totalSize += counters[i];
+        totalInSize += inCounters[i];
     }
 
     intT max_out_degree = *max_element(counters, counters + GA.n);
