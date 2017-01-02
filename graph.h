@@ -89,41 +89,37 @@ uint64_t encode(vector <uint_t> &in, vector <uint8_t> &out) {
 }
 
 template<typename uint_t>
-uint64_t encode0(uint_t *in, uint64_t size, uint8_t *out) {
-    // out[0..n_chunks-1] are reserved for flags
-    // out[n_chunks..] are used to store compressed data
+void decode(vector <uint8_t> &in, uint64_t size, vector <uint_t> &out) {
     uint64_t n_chunks = (size + 3) / 4;
     uint64_t used = n_chunks;
 
     for (uint64_t i = 0; i < n_chunks; i++) {
-        bitset<8> flags;
         uint64_t block = i * 4;
         for (uint8_t j = 0; j < 4 && block + j < size; j++) {
-            if (in[block + j] <= 0xFF) {
-                memcpy(&out[used], &in[block + j], 1);
-                used++;
-            } else if (in[block + j] <= 0xFFFF) {
-                memcpy(&out[used], &in[block + j], 2);
-                used += 2;
-                flags = 1 << (3 - j) * 2;
-            } else if (in[block + j] <= 0xFFFFFF) {
-                memcpy(&out[used], &in[block + j], 4);
-                used += 4;
-                flags = 2 << (3 - j) * 2;
-            } else {
-                memcpy(&out[used], &in[block + j], 8);
-                used += 8;
-                flags = 3 << (3 - j) * 2;
+            switch (in[i] >> (3 - j) * 2 & 0b00000011) {
+                case 0:
+                    memcpy(&out[block + j], &in[used], 1);
+                    used++;
+                    break;
+                case 1:
+                    memcpy(&out[block + j], &in[used], 2);
+                    used += 2;
+                    break;
+                case 2:
+                    memcpy(&out[block + j], &in[used], 4);
+                    used += 4;
+                    break;
+                case 3:
+                    memcpy(&out[block + j], &in[used], 8);
+                    used += 8;
+                    break;
             }
         }
-        out[i] = static_cast<uint8_t>(flags.to_ulong());
     }
-
-    return used; // byte
 }
 
 template<typename uint_t>
-void decode(vector <uint8_t> &in, uint64_t size, vector <uint_t> &out) {
+void decode0(uint8_t *in, uint64_t size, uint_t *out) {
     uint64_t n_chunks = (size + 3) / 4;
     uint64_t used = n_chunks;
 
