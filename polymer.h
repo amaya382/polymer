@@ -507,7 +507,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
 
     // TODO: parallelize
     for (intT i = 0; i < GA.n; i++) {
-        intT out_degree = V[i].getFakeDegree();
+        intT out_degree = V[i].getOutDegree();
         intT curr_out_ngh = 0;
         intT prev_out_ngh = 0;
         intT out_counter = 0;
@@ -522,7 +522,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
         newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
         out_consumed += out_used;
 
-        intT in_degree = V[i].getFakeInDegree();
+        intT in_degree = V[i].getInDegree();
         intT curr_in_ngh = 0;
         intT prev_in_ngh = 0;
         intT in_counter = 0;
