@@ -2502,7 +2502,7 @@ void vertexFilter(vertices *V, F filter, int nodeNum, int subNum, int totalSub, 
     }
 
     bool *dst = result->b;
-    int m = 0;
+    intT m = 0;
     /*
     if (size != result->endID - result->startID || offset != result->startID)
 	printf("oops\n");
