@@ -41,6 +41,9 @@
 #include <numa.h>
 #include <pthread.h>
 
+#include <algorithm>
+#include <bitset>
+
 using namespace std;
 
 #define PAGESIZE (4096)
@@ -415,15 +418,77 @@ graph<vertex> graphFilter(graph<vertex> &GA, int rangeLow, int rangeHi, bool use
     return graph<vertex>(newVertexSet, GA.n, GA.m);
 }
 
+template<typename uint_t>
+uint64_t encode0(uint_t *in, uint64_t size, uint8_t *out) {
+    // out[0..n_chunks-1] are reserved for flags
+    // out[n_chunks..] are used to store compressed data
+    uint64_t n_chunks = (size + 3) / 4;
+    uint64_t used = n_chunks;
+
+    for (uint64_t i = 0; i < n_chunks; i++) {
+        bitset<8> flags;
+        uint64_t block = i * 4;
+        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
+            if (in[block + j] <= 0xFF) {
+                memcpy(&out[used], &in[block + j], 1);
+                used++;
+            } else if (in[block + j] <= 0xFFFF) {
+                memcpy(&out[used], &in[block + j], 2);
+                used += 2;
+                flags = 1 << (3 - j) * 2;
+            } else if (in[block + j] <= 0xFFFFFF) {
+                memcpy(&out[used], &in[block + j], 4);
+                used += 4;
+                flags = 2 << (3 - j) * 2;
+            } else {
+                memcpy(&out[used], &in[block + j], 8);
+                used += 8;
+                flags = 3 << (3 - j) * 2;
+            }
+        }
+        out[i] = static_cast<uint8_t>(flags.to_ulong());
+    }
+
+    return used; // byte
+}
+
+template<typename uint_t>
+void decode0(uint8_t *in, uint64_t size, uint_t *out) {
+    uint64_t n_chunks = (size + 3) / 4;
+    uint64_t used = n_chunks;
+
+    for (uint64_t i = 0; i < n_chunks; i++) {
+        uint64_t block = i * 4;
+        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
+            switch (in[i] >> (3 - j) * 2 & 0b00000011) {
+                case 0:
+                    memcpy(&out[block + j], &in[used], 1);
+                    used++;
+                    break;
+                case 1:
+                    memcpy(&out[block + j], &in[used], 2);
+                    used += 2;
+                    break;
+                case 2:
+                    memcpy(&out[block + j], &in[used], 4);
+                    used += 4;
+                    break;
+                case 3:
+                    memcpy(&out[block + j], &in[used], 8);
+                    used += 8;
+                    break;
+            }
+        }
+    }
+}
+
 // create local graph (repack edges only in current node)
 template<class vertex>
 graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi) {
     vertex *V = GA.V;
     vertex *newVertexSet = (vertex *) numa_alloc_local(sizeof(vertex) * GA.n);
     int *counters = (int *) numa_alloc_local(sizeof(int) * GA.n);
-    int *offsets = (int *) numa_alloc_local(sizeof(int) * GA.n);
     int *inCounters = (int *) numa_alloc_local(sizeof(int) * GA.n);
-    int *inOffsets = (int *) numa_alloc_local(sizeof(int) * GA.n);
     {
         parallel_for (intT i = 0; i < GA.n; i++) {
             newVertexSet[i].setOutDegree(V[i].getOutDegree());
@@ -452,70 +517,55 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
         }
     }
 
-    intT totalSize = 0;
-    intT totalInSize = 0;
-    for (intT i = 0; i < GA.n; i++) {
-        offsets[i] = totalSize;
-        totalSize += counters[i];
+    intT max_out_degree = *max_element(counters, counters + GA.n);
+    intT max_in_degree = *max_element(inCounters, inCounters + GA.n);
+    intE *out_buf = (intE *) numa_alloc_local(sizeof(intE) * max_out_degree);
+    intE *in_buf = (intE *) numa_alloc_local(sizeof(intE) * max_in_degree);
 
-        inOffsets[i] = totalInSize;
-        totalInSize += inCounters[i];
+    intE *out_edges = (intE *) numa_alloc_local(sizeof(intE) * totalSize);
+    intE *in_edges = (intE *) numa_alloc_local(sizeof(intE) * totalInSize);
+
+    uint64_t out_consumed = 0; // byte
+    uint64_t in_consumed = 0; // byte
+
+    // TODO: parallelize
+    for (intT i = 0; i < GA.n; i++) {
+        intT out_degree = V[i].getOutDegree();
+        intT curr_out_ngh = 0;
+        intT prev_out_ngh = 0;
+        intT out_counter = 0;
+        for (intT j = 0; j < out_degree; j++) {
+            curr_out_ngh += V[i].getOutNeighbor(j);
+            if (rangeLow <= curr_out_ngh && curr_out_ngh < rangeHi) {
+                out_buf[out_counter++] = curr_out_ngh - prev_out_ngh;
+                prev_out_ngh = curr_out_ngh;
+            }
+        }
+        encode0<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
+        newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
+        out_consumed += out_counter;
+
+        intT in_degree = V[i].getInDegree();
+        intT curr_in_ngh = 0;
+        intT prev_in_ngh = 0;
+        intT in_counter = 0;
+        for (intT j = 0; j < in_degree; j++) {
+            curr_in_ngh += V[i].getInNeighbor(j);
+            if (rangeLow <= curr_in_ngh && curr_in_ngh < rangeHi) {
+                in_buf[in_counter++] = curr_in_ngh - prev_in_ngh;
+                prev_in_ngh = curr_in_ngh;
+            }
+        }
+        encode0<uintE>(in_buf, in_counter, &in_edges[in_consumed]);
+        newVertexSet[i].setInNeighbors(&in_edges[in_consumed]);
+        in_consumed += in_counter;
     }
 
     numa_free(counters, sizeof(int) * GA.n);
     numa_free(inCounters, sizeof(int) * GA.n);
+    numa_free(out_buf, sizeof(intE) * max_out_degree);
+    numa_free(in_buf, sizeof(intE) * max_in_degree);
 
-    intE *edges = (intE *) numa_alloc_local(sizeof(intE) * totalSize);
-    intE *inEdges = (intE *) numa_alloc_local(sizeof(intE) * totalInSize);
-    cerr << "totalInSize is " + to_string(totalInSize) + "\n";
-
-    {
-        parallel_for (intT i = 0; i < GA.n; i++) {
-            intE *localEdges = &edges[offsets[i]];
-            intT counter = 0;
-            intT d = V[i].getOutDegree();
-            intT out_ngh = 0;
-            intT new_out_ngh = 0;
-            for (intT j = 0; j < d; j++) {
-                out_ngh += V[i].getOutNeighbor(j);
-                if (rangeLow <= out_ngh && out_ngh < rangeHi) {
-                    localEdges[counter] = out_ngh - new_out_ngh;
-                    new_out_ngh = out_ngh;
-                    counter++;
-                }
-            }
-            if (counter != newVertexSet[i].getFakeDegree()) {
-                printf("oops: %d %d\n", counter, newVertexSet[i].getFakeDegree());
-            }
-
-            intE *localInEdges = &inEdges[inOffsets[i]];
-            counter = 0;
-            d = V[i].getInDegree();
-            intT in_ngh = 0;
-            intT new_in_ngh = 0;
-            for (intT j = 0; j < d; j++) {
-                in_ngh += V[i].getInNeighbor(j);
-                if (rangeLow <= in_ngh && in_ngh < rangeHi) {
-                    localInEdges[counter] = in_ngh - new_in_ngh;
-                    new_in_ngh = in_ngh;
-                    counter++;
-                }
-            }
-            if (counter != newVertexSet[i].getFakeInDegree()) {
-                printf("oops: %d %d\n", counter, newVertexSet[i].getFakeInDegree());
-            }
-
-            if (i == 0) {
-                cerr << "fake deg: " + to_string(newVertexSet[i].getFakeDegree()) + "\n";
-            }
-
-            newVertexSet[i].setOutNeighbors(localEdges);
-            newVertexSet[i].setInNeighbors(localInEdges);
-        }
-    }
-    numa_free(offsets, sizeof(int) * GA.n);
-    numa_free(inOffsets, sizeof(int) * GA.n);
-    //printf("degree: %d\n", newVertexSet[0].getFakeDegree());
     return graph<vertex>(newVertexSet, GA.n, GA.m);
 }
 
