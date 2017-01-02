@@ -519,7 +519,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             }
         }
 
-        if(i % 10000 == 0){
+        if(i % 100000 == 0){
             uint8_t *edges = (uint8_t *) numa_alloc_local(sizeof(intE) * out_counter);
             uint64_t used = encode0<uintE>(out_buf, out_counter, edges);
             string str = "";
