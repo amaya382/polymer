@@ -53,7 +53,7 @@ struct symmetricVertex {
 };
 
 template<typename uint_t>
-void decode(uint8_t *in, uint64_t size, vector<uint_t> &out) {
+inline void decode(uint8_t *in, uint64_t size, uint_t *out) {
     uint64_t n_chunks = (size + 3) / 4;
     uint64_t used = n_chunks;
 
@@ -116,7 +116,7 @@ struct asymmetricVertex {
         swap(inDegree, outDegree);
     }
 
-    void getOutNgh(vector<uintE> &data,uint64_t size){ decode<uintE>(out,size,data);}
+    void getOutNgh(uintE *data, uint64_t size){ decode<uintE>(out,size,data);}
     void setOutNeighbors(uint8_t *_i) { out = _i; }
     void setInNeighbors(uint8_t *_i) { in = _i; }
 

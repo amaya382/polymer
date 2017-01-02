@@ -418,7 +418,7 @@ graph<vertex> graphFilter(graph<vertex> &GA, int rangeLow, int rangeHi, bool use
 }
 
 template<typename uint_t>
-uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
+inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     // out[0..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
     uint64_t n_chunks = (size + 3) / 4;
@@ -481,7 +481,6 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 if (rangeLow <= in_ngh && in_ngh < rangeHi)
                     inCounters[i]++;
             }
-            newVertexSet[i].setFakeDegree(counters[i]);
             newVertexSet[i].setFakeInDegree(inCounters[i]);
         }
     }

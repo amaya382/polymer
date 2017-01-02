@@ -216,6 +216,8 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         currOffset = frontier->getOffset(currNodeNum);
     }
 
+    intE *nghs = (intE *)numa_alloc_local(sizeof(intE)*2000);
+
     for (long i = startPos; i < endPos; i++) {
         if (i == nextSwitchPoint) {
             currOffset += frontier->getSize(currNodeNum);
@@ -231,7 +233,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
 
             // TODO
             uintT ngh = 0;
-            vector<intT> nghs(d);
             G[i].getOutNgh(nghs, d);
 
             for (intT j = 0; j < d; j++) {
@@ -248,6 +249,8 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
             }
         }
     }
+
+    numa_free(nghs, sizeof(intE)*2000);
     return NULL;
 }
 
