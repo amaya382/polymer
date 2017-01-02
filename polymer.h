@@ -524,7 +524,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 uint64_t used = encode0<uintE>(out_buf, out_counter, edges);
                 string str = "";
                 for(intT k = 0; k < used; k++){
-                    str += "|" + to_string(bitset<8>(edges[k]));
+                    str += "|" + bitset<8>(edges[k]);
                 }
                 cout << to_string(i) + "\n" + to_string(out_buf[j]) + "\n" + str + "\n";
             }
