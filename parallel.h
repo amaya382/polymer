@@ -61,21 +61,26 @@
 
 #include <limits.h>
 
-#if defined(LONG)
-typedef long intT;
-typedef unsigned long uintT;
+//#if defined(LONG)
+//typedef long intT;
+//typedef unsigned long uintT;
+//#define INT_T_MAX LONG_MAX
+//#else
+//typedef int intT;
+//typedef unsigned int uintT;
+//#define INT_T_MAX INT_MAX
+//#endif
+typedef uint64_t intT;
+typedef uint64_t uintT;
 #define INT_T_MAX LONG_MAX
-#else
-typedef int intT;
-typedef unsigned int uintT;
-#define INT_T_MAX INT_MAX
-#endif
 
 //edges store 32-bit quantities unless EDGELONG is defined
-#if defined(EDGELONG)
-typedef long intE;
-typedef unsigned long uintE;
-#else
-typedef int intE;
-typedef unsigned int uintE;
-#endif
+//#if defined(EDGELONG)
+//typedef long intE;
+//typedef unsigned long uintE;
+//#else
+//typedef int intE;
+//typedef unsigned int uintE;
+//#endif
+typedef uint64_t intE;
+typedef uint64_t uintE;

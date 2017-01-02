@@ -519,11 +519,11 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
 
     intT max_out_degree = *max_element(counters, counters + GA.n);
     intT max_in_degree = *max_element(inCounters, inCounters + GA.n);
-    intE *out_buf = (intE *) numa_alloc_local(sizeof(intE) * max_out_degree);
-    intE *in_buf = (intE *) numa_alloc_local(sizeof(intE) * max_in_degree);
+    intE *out_buf = (intE *) numa_alloc_local(sizeof(intE) * max_out_degree); // expected max
+    intE *in_buf = (intE *) numa_alloc_local(sizeof(intE) * max_in_degree); // expected max
 
-    intE *out_edges = (intE *) numa_alloc_local(sizeof(intE) * totalSize);
-    intE *in_edges = (intE *) numa_alloc_local(sizeof(intE) * totalInSize);
+    uint8_t *out_edges = (uint8_t *) numa_alloc_local(sizeof(intE) * totalSize); // extra
+    uint8_t *in_edges = (uint8_t *) numa_alloc_local(sizeof(intE) * totalInSize); // extra
 
     uint64_t out_consumed = 0; // byte
     uint64_t in_consumed = 0; // byte
