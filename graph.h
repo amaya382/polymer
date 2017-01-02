@@ -156,24 +156,9 @@ void decode1(uint8_t *in, uint64_t size, vector<uint_t> &out) {
     for (uint64_t i = 0; i < n_chunks; i++) {
         uint64_t block = i * 4;
         for (uint8_t j = 0; j < 4 && block + j < size; j++) {
-            switch (in[i] >> (3 - j) * 2 & 0b00000011) {
-                case 0:
-                    memcpy(&out[block + j], &in[used], 1);
-                    used++;
-                    break;
-                case 1:
-                    memcpy(&out[block + j], &in[used], 2);
-                    used += 2;
-                    break;
-                case 2:
-                    memcpy(&out[block + j], &in[used], 4);
-                    used += 4;
-                    break;
-                case 3:
-                    memcpy(&out[block + j], &in[used], 8);
-                    used += 8;
-                    break;
-            }
+            uint8_t n_bytes = 0b00000001 << (in[i] >> (3 - j) * 2 & 0b00000011);
+            memcpy(&out[block + j], &in[used], n_bytes);
+            used += n_bytes;
         }
     }
 }
