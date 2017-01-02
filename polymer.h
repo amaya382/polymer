@@ -525,8 +525,8 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
             string str = "";
             uint64_t prev = 0;
             for(intT j = 0; j < out_counter; j++) {
-                str += to_string(prev + out_buf[j]) + ", ";
-                prev = out_buf[j];
+                prev += out_buf[j];
+                str += to_string(prev) + ", ";
             }
             str += "\n";
             for(intT k = 0; k < used; k++){
