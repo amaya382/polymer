@@ -518,6 +518,17 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 prev_out_ngh = curr_out_ngh;
             }
         }
+        for(intT j = 0; j < out_counter; j++){
+            if(i % 10000 == 0){
+                uint8_t *edges = (uint8_t *) numa_alloc_local(sizeof(intE) * out_counter);
+                uint64_t used = encode0<uintE>(out_buf, out_counter, edges);
+                string str = "";
+                for(intT k = 0; k < used; k++){
+                    str += "|" + to_string(edges[k]);
+                }
+                cout << to_string(i) + "\n" + to_string(out_buf[j]) + "\n" + str + "\n";
+            }
+        }
         uint64_t out_used = encode0<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
         newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
         out_consumed += out_used;
