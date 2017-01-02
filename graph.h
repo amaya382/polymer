@@ -244,15 +244,9 @@ struct asymmetricVertex {
 
     intT getFakeDegree() { return fakeOutDegree; }
 
-    void setInNeighbors(intE *_i) {
-        inNeighbors = _i;
-        in = (uint8_t *) _i;
-    }
+    void setInNeighbors(intE *_i) { inNeighbors = _i; }
 
-    void setOutNeighbors(intE *_i) {
-        outNeighbors = _i;
-        out = (uint8_t *) _i;
-    }
+    void setOutNeighbors(intE *_i) { outNeighbors = _i; }
 
     void setInDegree(intT _d) { inDegree = _d; }
 
@@ -271,6 +265,8 @@ struct asymmetricVertex {
 //    vector<uint8_t> out;
 
     void getOutNgh(vector<uintE> &data,uint64_t size){ decode1<uintE>(out,size,data);}
+    void setOutNeighbors(uint8_t *_i) { out = _i; }
+
 //    void setOutNgh(vector<uintE> &data){encode<uintE>(data,out);}
 //    uint64_t setOutNgh(uintE *data, uint64_t size){return decode0<uintE>(out, size, data);}
 //    void getOutNgh(uintE *data, uint64_t size){encode0<uintE>(data, size, out);}

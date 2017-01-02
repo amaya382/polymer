@@ -541,9 +541,9 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 prev_out_ngh = curr_out_ngh;
             }
         }
-        encode0<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
-        newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
-        out_consumed += out_counter;
+        uint64_t out_used = encode0<uintE>(out_buf, out_counter, &out_edges[out_consumed]);
+        newVertexSet[i].setOutNeighbors((intE *)&out_edges[out_consumed]);
+        out_consumed += out_used;
 
         intT in_degree = V[i].getInDegree();
         intT curr_in_ngh = 0;
@@ -556,9 +556,9 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 prev_in_ngh = curr_in_ngh;
             }
         }
-        encode0<uintE>(in_buf, in_counter, &in_edges[in_consumed]);
+        uint64_t in_used = encode0<uintE>(in_buf, in_counter, &in_edges[in_consumed]);
         newVertexSet[i].setInNeighbors(&in_edges[in_consumed]);
-        in_consumed += in_counter;
+        in_consumed += in_used;
     }
 
     numa_free(counters, sizeof(int) * GA.n);
