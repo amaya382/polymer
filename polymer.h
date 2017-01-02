@@ -526,8 +526,8 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
                 for(intT k = 0; k < used; k++){
                     str += "|";
                     bitset<8> bs(edges[k]);
-                    for(auto b: bs){
-                        str += to_string(b);
+                    for(uint8_t l = 0; l < 8; l++){
+                        str += to_string(bs[l]);
                     }
                 }
                 cout << to_string(i) + "\n" + to_string(out_buf[j]) + "\n" + str + "\n";
