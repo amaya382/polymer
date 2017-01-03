@@ -118,7 +118,8 @@ struct asymmetricVertex {
         swap(inDegree, outDegree);
     }
 
-    void traverseOutNgh(function<void(uintT)> f){
+    template<typename Func>
+    void traverseOutNgh(Func f){
         uint64_t n_chunks = (fakeOutDegree + 3) / 4;
         uint64_t used = n_chunks;
 
