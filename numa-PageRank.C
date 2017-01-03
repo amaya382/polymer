@@ -225,7 +225,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         }
         if (currBitVector[i - currOffset]) {
             G[i].traverseOutNgh([&f, &next, i](uintT ngh) {
-                if(f.cond(ngh) && f.updateValVar(i, f.getCurrVal(i), ngh)){
+                if(f.cond(ngh) && f.updateValVer(i, f.getCurrVal(i), ngh)){
                     next->setBit(ngh, true);
                 }
             });
