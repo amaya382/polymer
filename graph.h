@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <cstring>
+#include <functional>
 
 using namespace std;
 
@@ -117,6 +118,22 @@ struct asymmetricVertex {
         swap(inDegree, outDegree);
     }
 
+    void traverseOutNgh(function<void(uintT)> f){
+        uint64_t n_chunks = (outDegree + 3) / 4;
+        uint64_t used = n_chunks;
+
+        uintT ngh = 0;
+        for (uint64_t i = 0; i < n_chunks; i++) {
+            uint64_t block = i * 4;
+            for (uint8_t j = 0; j < 4 && block + j < size; j++) {
+                uint8_t n_bytes = 0b00000001 << (in[i] >> (3 - j) * 2 & 0b00000011);
+                uint8_t mask = 0xFFFFFFFFFFFFFFFF >> (8 - n_bytes) * 8;
+                ngh += *((uintT *)(&in[used])) & mask;
+                f(ngh);
+                used += n_bytes;
+            }
+        }
+    }
     void getOutNgh(uintE *data, uint64_t size){ decode<uintE>(out,size,data);}
     void setOutNeighbors(uint8_t *_i) { out = _i; }
     void setInNeighbors(uint8_t *_i) { in = _i; }
