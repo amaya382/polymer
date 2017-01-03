@@ -200,7 +200,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
     int currOffset = 0;
     int counter = 0;
 
-    intT m = 0;
     intT outEdgesCount = 0;
     bool *nextB = next->b;
 
@@ -224,9 +223,8 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
             currBitVector = frontier->getArr(currNodeNum);
             //printf("OK\n");
         }
-        m += G[i].getFakeDegree();
         if (currBitVector[i - currOffset]) {
-            G[i].traverseOutNgh([i, val](uintT ngh) {
+            G[i].traverseOutNgh([i](uintT ngh) {
                 if(f.cond(ngh) && f.updateValVar(i, f.getCurrVal(i), ngh)){
                     next->setBit(ngh, true);
                 }
