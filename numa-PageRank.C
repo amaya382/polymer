@@ -190,7 +190,7 @@ struct PR_subworker_arg {
 
 template<class F, class vertex>
 bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalFrontier *next, bool part = false,
-                               int start = 0, int end = 0) {
+                               int start = 0, int end = 0, intE *nghs) {
     intT numVertices = GA.n;
     vertex *G = GA.V;
 
@@ -215,8 +215,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         nextSwitchPoint = frontier->getOffset(currNodeNum + 1);
         currOffset = frontier->getOffset(currNodeNum);
     }
-
-    intE *nghs = (intE *)numa_alloc_local(sizeof(intE)*2000);
 
     for (long i = startPos; i < endPos; i++) {
         if (i == nextSwitchPoint) {
@@ -249,8 +247,6 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
             }
         }
     }
-
-    numa_free(nghs, sizeof(intE)*2000);
     return NULL;
 }
 
@@ -272,6 +268,8 @@ void *PageRankSubWorker(void *arg) {
     sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
 
     cerr << "On " + to_string(sched_getcpu()) + "\n";
+
+    intE *nghs = (intE *)numa_alloc_local(sizeof(intE)*2000);
 
     pthread_barrier_t *local_barr = my_arg->node_barr;
     LocalFrontier *output = my_arg->localFrontier;
@@ -331,7 +329,7 @@ void *PageRankSubWorker(void *arg) {
         gettimeofday(&startT, &tz);
         //edgeMapDenseForward(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, true, subworker.dense_start, subworker.dense_end);
         edgeMapDenseForwardOTHER(GA, Frontier, PR_F<vertex>(p_curr, p_next, GA.V, rangeLow, rangeHi), output, true,
-                                 subworker.dense_start, subworker.dense_end);
+                                 subworker.dense_start, subworker.dense_end, nghs);
         //edgeMapDenseForwardDynamic(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, subworker);
         gettimeofday(&midT, &tz);
         subworker.localWait();
@@ -380,6 +378,7 @@ void *PageRankSubWorker(void *arg) {
     }
     pthread_barrier_wait(local_barr);
 
+    numa_free(nghs, sizeof(intE)*2000);
     return NULL;
 }
 
