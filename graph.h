@@ -61,6 +61,7 @@ inline void decode(uint8_t *in, uint64_t size, uint_t *out) {
         uint64_t block = i * 4;
         for (uint8_t j = 0; j < 4 && block + j < size; j++) {
             uint8_t n_bytes = 0b00000001 << (in[i] >> (3 - j) * 2 & 0b00000011);
+            out[block + j] = 0;
             memcpy(&out[block + j], &in[used], n_bytes);
             used += n_bytes;
         }
