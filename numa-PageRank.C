@@ -189,8 +189,8 @@ struct PR_subworker_arg {
 };
 
 template<class F, class vertex>
-bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalFrontier *next, bool part = false,
-                               int start = 0, int end = 0, intE *nghs) {
+bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalFrontier *next,
+                               intE *nghs, bool part = false, int start = 0, int end = 0) {
     intT numVertices = GA.n;
     vertex *G = GA.V;
 
@@ -328,8 +328,8 @@ void *PageRankSubWorker(void *arg) {
         struct timezone tz = {0, 0};
         gettimeofday(&startT, &tz);
         //edgeMapDenseForward(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, true, subworker.dense_start, subworker.dense_end);
-        edgeMapDenseForwardOTHER(GA, Frontier, PR_F<vertex>(p_curr, p_next, GA.V, rangeLow, rangeHi), output, true,
-                                 subworker.dense_start, subworker.dense_end, nghs);
+        edgeMapDenseForwardOTHER(GA, Frontier, PR_F<vertex>(p_curr, p_next, GA.V, rangeLow, rangeHi), output, nghs, true,
+                                 subworker.dense_start, subworker.dense_end);
         //edgeMapDenseForwardDynamic(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, subworker);
         gettimeofday(&midT, &tz);
         subworker.localWait();
