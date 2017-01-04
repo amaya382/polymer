@@ -129,7 +129,7 @@ struct asymmetricVertex {
             for (uint8_t j = 0; j < 4 && block + j < fakeOutDegree; j++) {
                 uint8_t n_bytes = 0b00000001 << (out[i] >> (3 - j) * 2 & 0b00000011);
                 uint64_t mask = 0xFFFFFFFFFFFFFFFFull >> (8 - n_bytes) * 8;
-                ngh += ((uintT *)(&out[used]))[0] & mask;
+                ngh += (reinterpret_cast<uintT *>(&out[used]))[0] & mask;
                 f(ngh);
                 used += n_bytes;
             }
