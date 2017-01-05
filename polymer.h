@@ -496,7 +496,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     }
     uint_t *_in = in + 1; // shift
 
-    for (uint64_t i = 0; i < n_chunks; i++) {
+    for (uint64_t i = 0; i < n_chunks - 1; i++) {
         uint8_t flags = 0b00000000;
         uint64_t block = i * 4;
         for (uint8_t j = 0; j < 4 && block + j < size; j++) {
@@ -542,7 +542,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     for (uint64_t i = 0; i < n_chunks; i++) {
         uint8_t flags = 0b00000000;
         uint64_t block = i * 8;
-        for (uint8_t j = 0; j < 8 && block + j < size; j++) {
+        for (uint8_t j = 0; j < 8 && block + j < size - 1; j++) {
             if (_in[block + j] <= 0xFFFF) {
                 memcpy(&out[used], &_in[block + j], 2);
                 used += 2;
