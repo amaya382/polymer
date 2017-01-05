@@ -171,7 +171,6 @@ struct asymmetricVertex {
         uint64_t used = n_chunks;
 
         uintT ngh = 0;
-        uint8_t *_out = out + 8;
         if (fakeOutDegree > 0) {
             ngh += (reinterpret_cast<uintT *>(out))[0];
             f(ngh);
@@ -183,9 +182,9 @@ struct asymmetricVertex {
         for (uint64_t i = 0; i < n_chunks; i++) {
             uint64_t block = i * 4;
             for (uint8_t j = 0; j < 4 && block + j < fakeOutDegree - 1; j++) {
-                uint8_t n_bytes = 0b00000001 << (_out[i] >> (3 - j) * 2 & 0b00000011);
+                uint8_t n_bytes = 0b00000001 << (out[i + 8] >> (3 - j) * 2 & 0b00000011);
                 uint64_t mask = 0xFFFFFFFFFFFFFFFFull >> (8 - n_bytes) * 8;
-                ngh += (reinterpret_cast<uintT *>(&_out[used]))[0] & mask;
+                ngh += (reinterpret_cast<uintT *>(&out[used]))[0] & mask;
                 f(ngh);
                 used += n_bytes;
             }
@@ -199,7 +198,6 @@ struct asymmetricVertex {
         uint64_t used = n_chunks;
 
         uintT ngh = 0;
-        uint8_t *_out = out + 8;
         if (fakeOutDegree > 0) {
             ngh += (reinterpret_cast<uintT *>(out))[0];
             f(ngh);
@@ -211,14 +209,14 @@ struct asymmetricVertex {
         for (uint64_t i = 0; i < n_chunks; i++) {
             uint64_t block = i * 8;
             for (uint8_t j = 0; j < 8 && block + j < fakeOutDegree - 1; j++) {
-                bool flag = _out[i] >> (7 - j) & 0b00000001;
+                bool flag = out[i + 8] >> (7 - j) & 0b00000001;
                 if (flag) {
-                    ngh += (reinterpret_cast<uintT *>(&_out[used]))[0]
+                    ngh += (reinterpret_cast<uintT *>(&out[used]))[0]
                         & 0xFFFFFFFFFFFFFFFFull;
                     f(ngh);
                     used += 8;
                 } else {
-                    ngh += (reinterpret_cast<uintT *>(&_out[used]))[0]
+                    ngh += (reinterpret_cast<uintT *>(&out[used]))[0]
                         & 0xFFFF;
                     f(ngh);
                     used += 2;

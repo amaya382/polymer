@@ -483,11 +483,11 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
 // HEAD4ALL
 template<typename uint_t>
 inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
-    // out[0] is used to head value, which not diff but raw value
+    // out[0] is used to store head value, which not diff but raw value
     // out[1..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
     uint64_t n_chunks = (size + 2) / 4;
-    uint64_t used = n_chunks;
+    uint64_t used = n_chunks; // byte
 
     if (size > 0) {
         memcpy(out, in, 8); // head
@@ -495,7 +495,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     } else {
         return 0;
     }
-    uint_t *_in = in + 1; // shift
+    auto _in = in + 1; // shift
 
     for (uint64_t i = 0; i < n_chunks; i++) {
         uint8_t flags = 0b00000000;
@@ -527,7 +527,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
 // HEAD2ALL
 template<typename uint_t>
 inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
-    // out[0] is used to head value, which not diff but raw value
+    // out[0] is used to store head value, which not diff but raw value
     // out[0..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
     uint64_t n_chunks = (size + 6) / 8;
@@ -539,7 +539,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     } else {
         return 0;
     }
-    uint_t *_in = in + 1; // shift
+    auto _in = in + 1; // shift
 
     for (uint64_t i = 0; i < n_chunks; i++) {
         uint8_t flags = 0b00000000;
