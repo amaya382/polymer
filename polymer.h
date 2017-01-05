@@ -486,7 +486,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     // out[0] is used to head value, which not diff but raw value
     // out[1..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
-    uint64_t n_chunks = (size + 3) / 4;
+    uint64_t n_chunks = (size + 2) / 4;
     uint64_t used = n_chunks;
 
     if (size > 0) {
@@ -530,7 +530,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     // out[0] is used to head value, which not diff but raw value
     // out[0..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
-    uint64_t n_chunks = (size + 7) / 8;
+    uint64_t n_chunks = (size + 6) / 8;
     uint64_t used = n_chunks;
 
     if (size > 0) {
