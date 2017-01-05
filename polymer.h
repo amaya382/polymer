@@ -489,7 +489,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     uint64_t n_chunks = (size + 3) / 4;
     uint64_t used = n_chunks;
 
-    if (size) {
+    if (size > 0) {
         memcpy(out, in, 8); // head
         used += 8;
     } else {
@@ -533,7 +533,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     uint64_t n_chunks = (size + 7) / 8;
     uint64_t used = n_chunks;
 
-    if (size) {
+    if (size > 0) {
         memcpy(out, in, 8); // head
         used += 8;
     } else {
