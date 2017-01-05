@@ -499,11 +499,11 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
             if (_in[block + j] <= 0xFF) {
                 memcpy(&out[used], &_in[block + j], 1);
                 used++;
-            } else if (in[block + j] <= 0xFFFF) {
+            } else if (_in[block + j] <= 0xFFFF) {
                 memcpy(&out[used], &_in[block + j], 2);
                 used += 2;
                 flags |= 0b00000001 << (3 - j) * 2;
-            } else if (in[block + j] <= 0xFFFFFF) {
+            } else if (_in[block + j] <= 0xFFFFFF) {
                 memcpy(&out[used], &_in[block + j], 4);
                 used += 4;
                 flags |= 0b00000010 << (3 - j) * 2;
@@ -513,7 +513,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
                 flags |= 0b00000011 << (3 - j) * 2;
             }
         }
-        out[i + 1] = flags;
+        out[i + 8] = flags;
     }
 
     return used; // byte
@@ -544,12 +544,12 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
                 flags |= 0b00000001 << (7 - j);
             }
         }
-        out[i + 1] = flags;
+        out[i + 8] = flags;
     }
 
     return used; // byte
 }
-#else
+#elif TYPE == 4
 // No optimization
 template<typename uint_t>
 inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {

@@ -226,13 +226,15 @@ struct asymmetricVertex {
             }
         }
     }
-#else
+#elif TYPE == 4
     // No optimization
     template<typename Func>
     void traverseOutNgh(Func f){
+        uintT ngh = 0;
         auto p = reinterpret_cast<uintT *>(out);
         for (uint64_t i = 0; i < fakeOutDegree; i++){
-            f(p[i]);
+            ngh += p[i]
+            f(ngh);
         }
     }
 #endif
