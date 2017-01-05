@@ -233,7 +233,7 @@ struct asymmetricVertex {
         uintT ngh = 0;
         auto p = reinterpret_cast<uintT *>(out);
         for (uint64_t i = 0; i < fakeOutDegree; i++){
-            ngh += p[i]
+            ngh += p[i];
             f(ngh);
         }
     }
