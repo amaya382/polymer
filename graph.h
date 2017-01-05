@@ -172,7 +172,7 @@ struct asymmetricVertex {
 
         uintT ngh = 0;
         uint8_t *_out = out + 8;
-        if (fakeDegree) {
+        if (fakeOutDegree) {
             ngh += (reinterpret_cast<uintT *>(&out[used]))[0];
             f(ngh);
             used += 8;
