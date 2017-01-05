@@ -118,6 +118,8 @@ struct asymmetricVertex {
         swap(inDegree, outDegree);
     }
 
+#if TYPE == 0
+    // 4ALL
     template<typename Func>
     void traverseOutNgh(Func f){
         uint64_t n_chunks = (fakeOutDegree + 3) / 4;
@@ -135,6 +137,106 @@ struct asymmetricVertex {
             }
         }
     }
+#elif TYPE == 1
+    // 2ALL
+    template<typename Func>
+    void traverseOutNgh(Func f){
+        uint64_t n_chunks = (fakeOutDegree + 7) / 8;
+        uint64_t used = n_chunks;
+
+        uintT ngh = 0;
+        for (uint64_t i = 0; i < n_chunks; i++) {
+            uint64_t block = i * 8;
+            for (uint8_t j = 0; j < 8 && block + j < fakeOutDegree; j++) {
+                bool flag = out[i] >> (7 - j) & 0b00000001;
+                if (flag) {
+                    ngh += (reinterpret_cast<uintT *>(&out[used]))[0]
+                        & 0xFFFFFFFFFFFFFFFFull;
+                    f(ngh);
+                    used += 8;
+                } else {
+                    ngh += (reinterpret_cast<uintT *>(&out[used]))[0]
+                        & 0xFFFF;
+                    f(ngh);
+                    used += 2;
+                }
+            }
+        }
+    }
+#elif TYPE == 2
+    // HEAD4ALL
+    template<typename Func>
+    void traverseOutNgh(Func f){
+        uint64_t n_chunks = (fakeOutDegree + 3) / 4;
+        uint64_t used = n_chunks;
+
+        uintT ngh = 0;
+        uint8_t *_out = out + 8;
+        if (fakeDegree) {
+            ngh += (reinterpret_cast<uintT *>(&out[used]))[0];
+            f(ngh);
+            used += 8;
+        } else {
+            return;
+        }
+
+        for (uint64_t i = 0; i < n_chunks; i++) {
+            uint64_t block = i * 4;
+            for (uint8_t j = 0; j < 4 && block + j < fakeOutDegree - 1; j++) {
+                uint8_t n_bytes = 0b00000001 << (_out[i] >> (3 - j) * 2 & 0b00000011);
+                uint64_t mask = 0xFFFFFFFFFFFFFFFFull >> (8 - n_bytes) * 8;
+                ngh += (reinterpret_cast<uintT *>(&_out[used]))[0] & mask;
+                f(ngh);
+                used += n_bytes;
+            }
+        }
+    }
+#elif TYPE == 3
+    // HEAD2ALL
+    template<typename Func>
+    void traverseOutNgh(Func f){
+        uint64_t n_chunks = (fakeOutDegree + 7) / 8;
+        uint64_t used = n_chunks;
+
+        uintT ngh = 0;
+        uint8_t *_out = out + 8;
+        if (fakeDegree) {
+            ngh += (reinterpret_cast<uintT *>(&out[used]))[0];
+            f(ngh);
+            used += 8;
+        } else {
+            return;
+        }
+
+        for (uint64_t i = 0; i < n_chunks; i++) {
+            uint64_t block = i * 8;
+            for (uint8_t j = 0; j < 8 && block + j < fakeOutDegree - 1; j++) {
+                bool flag = _out[i] >> (7 - j) & 0b00000001;
+                if (flag) {
+                    ngh += (reinterpret_cast<uintT *>(&_out[used]))[0]
+                        & 0xFFFFFFFFFFFFFFFFull;
+                    f(ngh);
+                    used += 8;
+                } else {
+                    ngh += (reinterpret_cast<uintT *>(&_out[used]))[0]
+                        & 0xFFFF;
+                    f(ngh);
+                    used += 2;
+                }
+            }
+        }
+    }
+#else
+    // No optimization
+    template<typename Func>
+    void traverseOutNgh(Func f){
+        auto p = reinterpret_cast<uintT *>(out);
+        for (uint64_t i = 0; i < fakeOutDegree; i++){
+            f(p[i]);
+        }
+    }
+#endif
+
     void getOutNgh(uintE *data, uint64_t size){ decode<uintE>(out,size,data);}
     void setOutNeighbors(uint8_t *_i) { out = _i; }
     void setInNeighbors(uint8_t *_i) { in = _i; }

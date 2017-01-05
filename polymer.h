@@ -417,6 +417,8 @@ graph<vertex> graphFilter(graph<vertex> &GA, int rangeLow, int rangeHi, bool use
     return graph<vertex>(newVertexSet, GA.n, GA.m);
 }
 
+#if TYPE == 0
+// 4ALL
 template<typename uint_t>
 inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     // out[0..n_chunks-1] are reserved for flags
@@ -450,6 +452,111 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
 
     return used; // byte
 }
+#elif TYPE == 1
+// 2ALL
+template<typename uint_t>
+inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
+    // out[0..n_chunks-1] are reserved for flags
+    // out[n_chunks..] are used to store compressed data
+    uint64_t n_chunks = (size + 7) / 8;
+    uint64_t used = n_chunks;
+
+    for (uint64_t i = 0; i < n_chunks; i++) {
+        uint8_t flags = 0b00000000;
+        uint64_t block = i * 8;
+        for (uint8_t j = 0; j < 8 && block + j < size; j++) {
+            if (in[block + j] <= 0xFFFF) {
+                memcpy(&out[used], &in[block + j], 2);
+                used += 2;
+            } else {
+                memcpy(&out[used], &in[block + j], 8);
+                used += 8;
+                flags |= 0b00000001 << (7 - j);
+            }
+        }
+        out[i] = flags;
+    }
+
+    return used; // byte
+}
+#elif TYPE == 2
+// HEAD4ALL
+template<typename uint_t>
+inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
+    // out[0] is used to head value, which not diff but raw value
+    // out[1..n_chunks-1] are reserved for flags
+    // out[n_chunks..] are used to store compressed data
+    uint64_t n_chunks = (size + 3) / 4;
+    uint64_t used = n_chunks + 8;
+
+    memcpy(out, in, 8); // head
+    uint8_t *_in = in + 1; // shift
+
+    for (uint64_t i = 0; i < n_chunks; i++) {
+        uint8_t flags = 0b00000000;
+        uint64_t block = i * 4;
+        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
+            if (_in[block + j] <= 0xFF) {
+                memcpy(&out[used], &_in[block + j], 1);
+                used++;
+            } else if (in[block + j] <= 0xFFFF) {
+                memcpy(&out[used], &_in[block + j], 2);
+                used += 2;
+                flags |= 0b00000001 << (3 - j) * 2;
+            } else if (in[block + j] <= 0xFFFFFF) {
+                memcpy(&out[used], &_in[block + j], 4);
+                used += 4;
+                flags |= 0b00000010 << (3 - j) * 2;
+            } else {
+                memcpy(&out[used], &_in[block + j], 8);
+                used += 8;
+                flags |= 0b00000011 << (3 - j) * 2;
+            }
+        }
+        out[i + 1] = flags;
+    }
+
+    return used; // byte
+}
+#elif TYPE == 3
+// HEAD2ALL
+template<typename uint_t>
+inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
+    // out[0] is used to head value, which not diff but raw value
+    // out[0..n_chunks-1] are reserved for flags
+    // out[n_chunks..] are used to store compressed data
+    uint64_t n_chunks = (size + 7) / 8;
+    uint64_t used = n_chunks + 8;
+
+    memcpy(out, in, 8); // head
+    uint8_t *_in = in + 1; // shift
+
+    for (uint64_t i = 0; i < n_chunks; i++) {
+        uint8_t flags = 0b00000000;
+        uint64_t block = i * 8;
+        for (uint8_t j = 0; j < 8 && block + j < size; j++) {
+            if (_in[block + j] <= 0xFFFF) {
+                memcpy(&out[used], &_in[block + j], 2);
+                used += 2;
+            } else {
+                memcpy(&out[used], &_in[block + j], 8);
+                used += 8;
+                flags |= 0b00000001 << (7 - j);
+            }
+        }
+        out[i + 1] = flags;
+    }
+
+    return used; // byte
+}
+#else
+// No optimization
+template<typename uint_t>
+inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
+    memcpy(out, in, size * 8);
+    return size * 8; // byte
+}
+#endif
 
 // create local graph (repack edges only in current node)
 template<class vertex>
