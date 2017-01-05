@@ -487,19 +487,20 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     // out[1..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
     uint64_t n_chunks = (size + 3) / 4;
-    uint64_t used = n_chunks + 8;
+    uint64_t used = n_chunks;
 
     if (size) {
         memcpy(out, in, 8); // head
+        used += 8;
     } else {
         return 0;
     }
     uint_t *_in = in + 1; // shift
 
-    for (uint64_t i = 0; i < n_chunks - 1; i++) {
+    for (uint64_t i = 0; i < n_chunks; i++) {
         uint8_t flags = 0b00000000;
         uint64_t block = i * 4;
-        for (uint8_t j = 0; j < 4 && block + j < size; j++) {
+        for (uint8_t j = 0; j < 4 && block + j < size - 1; j++) {
             if (_in[block + j] <= 0xFF) {
                 memcpy(&out[used], &_in[block + j], 1);
                 used++;
@@ -530,10 +531,11 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     // out[0..n_chunks-1] are reserved for flags
     // out[n_chunks..] are used to store compressed data
     uint64_t n_chunks = (size + 7) / 8;
-    uint64_t used = n_chunks + 8;
+    uint64_t used = n_chunks;
 
     if (size) {
         memcpy(out, in, 8); // head
+        used += 8;
     } else {
         return 0;
     }
