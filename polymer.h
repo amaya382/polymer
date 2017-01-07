@@ -42,6 +42,7 @@
 #include <pthread.h>
 
 #include <algorithm>
+#include "simdcomp.h"
 
 using namespace std;
 
@@ -565,6 +566,26 @@ template<typename uint_t>
 inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     memcpy(out, in, size * 8);
     return size * 8; // byte
+}
+#elif TYPE == 5
+// SIMDCOMP
+template<typename uint_t>
+inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
+    uint32_t head = 0;
+    if (size > 0) {
+        head = in[0];
+        memcpy(out, &head, 4);
+        if (size > 1) {
+            uint32_t b1 = simdmaxbitsd1(head, in + 1);
+            memcpy(out + 4, &b1, 4);
+            simdpackwithoutmaskd1(head, in + 1, out + 8, b1);
+            return sizeof(uint_t) + 4 + b1 * 32;
+        } else {
+            return 4;
+        }
+    } else {
+        return 0;
+    }
 }
 #endif
 

@@ -7,6 +7,8 @@
 #include <cstring>
 #include <functional>
 
+#include "simdcomp.h"
+
 using namespace std;
 
 // **************************************************************
@@ -235,15 +237,24 @@ struct asymmetricVertex {
             f(ngh);
         }
     }
+#elif TYPE == 5
+    void getOutNghs(uintE *ref) {
+        uintT head = 0;
+        if (fakeOutDegree > 0) {
+            ref[0] = (reinterpret_cast<uintT *>(out))[0];
+            if (fakeOutDegree > 1) {
+                auto b = (reinterpret_cast<uint32_t *>(out))[1];
+                simdunpackd1(head, out + sizeof(uintT), ref + 1, b);
+            }
+        } else {
+            return;
+        }
+    }
 #endif
 
     void getOutNgh(uintE *data, uint64_t size){ decode<uintE>(out,size,data);}
     void setOutNeighbors(uint8_t *_i) { out = _i; }
     void setInNeighbors(uint8_t *_i) { in = _i; }
-
-//    void setOutNgh(vector<uintE> &data){encode<uintE>(data,out);}
-//    uint64_t setOutNgh(uintE *data, uint64_t size){return decode<uintE>(out, size, data);}
-//    void getOutNgh(uintE *data, uint64_t size){encode<uintE>(data, size, out);}
 };
 
 template<class vertex>

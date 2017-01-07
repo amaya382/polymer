@@ -225,11 +225,23 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         }
         if (currBitVector[i - currOffset]) {
             auto val = f.getCurrVal(i);
-            G[i].traverseOutNgh([&f, &next, i, val](uintT ngh) {
-                if(f.cond(ngh) && f.updateValVer(i, val, ngh)){
-                    next->setBit(ngh, true);
-                }
+            auto d = f.getFakeDegree();
+#if TYPE != 5
+            G[i].traverseOutNgh([&f, /*&next,*/ i, val](uintT ngh) {
+//                if(f.cond(ngh) && f.updateValVer(i, val, ngh)){
+//                    next->setBit(ngh, true);
+//                }
+                f.updateValVer(i, val, ngh);
             });
+#else
+            G[i].getOutNghs(nghs);
+            for (intE i = 0; i < d; i++) {
+//                if(f.cond(ngh[i]) && f.updateValVer(i, val, ngh[i])){
+//                    next->setBit(ngh[i], true);
+//                }
+                f.updateValVer(i, val, ngh[i]);
+            }
+#endif
         }
     }
     return NULL;
