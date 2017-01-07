@@ -225,11 +225,30 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
         }
         if (currBitVector[i - currOffset]) {
             auto val = f.getCurrVal(i);
-            G[i].traverseOutNgh([&f, &next, i, val](uintT ngh) {
-                if(f.cond(ngh) && f.updateValVer(i, val, ngh)){
-                    next->setBit(ngh, true);
+            auto out = G[i].getRawOutNgh();
+            auto d = G[i].getFakeDegree();
+            uint64_t n_chunks = (d + 2) / 4;
+            uint64_t used = n_chunks;
+
+            uintT ngh = 0;
+            if (d > 0) {
+                ngh += (reinterpret_cast<uintT *>(out))[0];
+                f.updateValVer(i, val, ngh);
+                used += 8;
+            } else {
+                return;
+            }
+
+            for (uint64_t i = 0; i < n_chunks; i++) {
+                uint64_t block = i * 4;
+                for (uint8_t j = 0; j < 4 && block + j < d - 1; j++) {
+                    uint8_t n_bytes = 0b00000001 << (out[i + 8] >> (3 - j) * 2 & 0b00000011);
+                    uint64_t mask = 0xFFFFFFFFFFFFFFFFull >> (8 - n_bytes) * 8;
+                    ngh += (reinterpret_cast<uintT *>(&out[used]))[0] & mask;
+                    f.updateValVer(i, val, ngh);
+                    used += n_bytes;
                 }
-            });
+            }
         }
     }
     return NULL;
