@@ -70,9 +70,9 @@
 //typedef unsigned int uintT;
 //#define INT_T_MAX INT_MAX
 //#endif
-typedef uint64_t intT;
-typedef uint64_t uintT;
-#define INT_T_MAX LONG_MAX
+typedef uint32_t intT;
+typedef uint32_t uintT;
+#define INT_T_MAX INT_MAX
 
 //edges store 32-bit quantities unless EDGELONG is defined
 //#if defined(EDGELONG)
@@ -82,5 +82,5 @@ typedef uint64_t uintT;
 //typedef int intE;
 //typedef unsigned int uintE;
 //#endif
-typedef uint64_t intE;
-typedef uint64_t uintE;
+typedef uint32_t intE;
+typedef uint32_t uintE;

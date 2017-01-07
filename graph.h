@@ -244,7 +244,7 @@ struct asymmetricVertex {
             ref[0] = (reinterpret_cast<uintT *>(out))[0];
             if (fakeOutDegree > 1) {
                 auto b = (reinterpret_cast<uint32_t *>(out))[1];
-                simdunpackd1(head, out + sizeof(uintT), ref + 1, b);
+                simdunpackd1(head, reinterpret_cast<const __m128i*>(out + sizeof(uintT)), ref + 1, b);
             }
         } else {
             return;
