@@ -164,9 +164,9 @@ graph <vertex> readGraphFromFile(char *fname, bool isSymmetric) {
     auto get_and_memo_edge = [&](intE i) {
         return out_edges[i] = atol(W.Strings[skip_lines + n + i]);
     };
-    parallel_for (long i = 0; i < n - 1; i++) {
+    parallel_for (long i = 0; i < n; i++) {
         auto offset = out_offsets[i];
-        auto upper = out_offsets[i + 1];
+        auto upper = (i != n - 1) ? out_offsets[i + 1] : m;
         auto degree = upper - offset;
 
         if(degree > 0) {
@@ -175,29 +175,10 @@ graph <vertex> readGraphFromFile(char *fname, bool isSymmetric) {
         }
 
         v[i].setOutDegree(degree);
-//        v[i].setFakeDegree(degree);
         v[i].setOutNeighbors(out_gap_edges.data() + offset);
         for (long j = offset + 1; j < upper; j++) {
             out_gap_edges[j] = get_and_memo_edge(j) - out_edges[j - 1];
             add_in_edges(i, out_edges[j]);
-        }
-    }
-    {
-        auto last = n - 1;
-        auto offset = out_offsets[last];
-        auto upper = m;
-        auto degree = upper - offset;
-
-        if(degree > 0) {
-            out_gap_edges[offset] = get_and_memo_edge(offset);
-            add_in_edges(last, out_edges[offset]);
-        }
-
-        v[last].setOutDegree(degree);
-        v[last].setOutNeighbors(out_gap_edges.data() + offset);
-        for (long j = offset + 1; j < upper; j++) {
-            out_gap_edges[j] = get_and_memo_edge(j) - out_edges[j - 1];
-            add_in_edges(last, out_edges[j]);
         }
     }
 

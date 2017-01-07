@@ -620,7 +620,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
     uint64_t out_consumed = 0; // byte
     uint64_t in_consumed = 0; // byte
 
-    // TODO: parallelize
+    // TODO: parallelize, divide into (CORES_PER_NODE) chunks and pack one array by shifting(?)
     for (intT i = 0; i < GA.n; i++) {
         intT out_degree = V[i].getOutDegree();
         intT curr_out_ngh = 0;
