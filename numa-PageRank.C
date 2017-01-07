@@ -236,7 +236,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
                 f.updateValVer(i, val, ngh);
                 used += 8;
             } else {
-                continue;
+                return;
             }
 
             for (uint64_t i = 0; i < n_chunks; i++) {
