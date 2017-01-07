@@ -238,9 +238,6 @@ struct asymmetricVertex {
 #endif
 
     void getOutNgh(uintE *data, uint64_t size){ decode<uintE>(out,size,data);}
-    uint8_t* getRawOutNgh(){
-        return out;
-    }
     void setOutNeighbors(uint8_t *_i) { out = _i; }
     void setInNeighbors(uint8_t *_i) { in = _i; }
 
