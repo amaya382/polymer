@@ -239,7 +239,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
 //                if(f.cond(ngh[i]) && f.updateValVer(i, val, ngh[i])){
 //                    next->setBit(ngh[i], true);
 //                }
-                f.updateValVer(i, val, ngh[i]);
+                f.updateValVer(i, val, nghs[i]);
             }
 #endif
         }
