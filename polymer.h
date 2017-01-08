@@ -578,8 +578,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
         if (size > 1) {
             uint32_t b1 = simdmaxbitsd1(head, in + 1);
             memcpy(out + 4, &b1, 4);
-            simdpackwithoutmaskd1(head, reinterpret_cast<const __m128i*>(in + 1),
-             reinterpret_cast<const __m128i*>(out + 8), b1);
+            simdpackwithoutmaskd1(head, reinterpret_cast<const __m128i*>(in + 1), out + 8, b1);
             return sizeof(uint_t) + 4 + b1 * 32;
         } else {
             return 4;
