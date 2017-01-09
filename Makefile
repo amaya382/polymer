@@ -23,7 +23,7 @@ PCFLAGS = -O3 -DCILKP $(INTT) $(INTE)
 
 else
 PCC = g++
-PCFLAGS = -O2 $(INTT) $(INTE)
+PCFLAGS = -O3 $(INTT) $(INTE)
 endif
 
 #PCFLAGS = -fcilkplus -lcilkrts -O2 -DCILK $(INTT) $(INTE)
@@ -43,7 +43,7 @@ debug: PCFLAGS = -fcilkplus -lcilkrts -O0 -g -DCILK $(INTT) $(INTE)
 debug: all
 
 % : %.C $(COMMON)
-	$(PCC) $(PCFLAGS) -o $@ $< $(LIBS_I_NEED) -std=c++14 -mavx2
+	$(PCC) $(PCFLAGS) -o $@ $< $(LIBS_I_NEED) -std=c++14 -mavx2 -DTYPE=5
 
 .PHONY : clean
 
