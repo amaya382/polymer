@@ -244,7 +244,7 @@ struct asymmetricVertex {
         auto *_packed = reinterpret_cast<uint_t>(packed);
         auto mask = 0xFFFFFFFF;
         uint8_t xs[8];
-        for (auto i = 0; uint8_t acc = n_bits; i < size; i++, acc += n_bits) {
+        for (auto i = 0, uint8_t acc = n_bits; i < size; i++, acc += n_bits) {
             auto block = acc / BIT_SIZE_OF_T;
             auto surplus = acc % BIT_SIZE_OF_T < n_bits ? acc % BIT_SIZE_OF_T % n_bits : 0;
             if (surplus) {
@@ -287,10 +287,10 @@ struct asymmetricVertex {
                     }
                 }
 
-                if (fakeOutDegree - out_offset > 0) {
+                if (fakeOutDegree - ref_offset > 0) {
                     auto flag_idx = out_offset;
                     for (; ref_offset < fakeOutDegree; ref_offset++) {
-                        if (out[i + 8] >> (7 - (size - in_offset)) & 0b00000001) {
+                        if (out[flag_idx] >> (7 - (fakeOutDegree - ref_offset)) & 0b00000001) {
                             prev_scalar += reinterpret_cast<uint32_t *>(out + out_offset)[0];
                             out_offset += 4;
                         } else {
