@@ -266,7 +266,7 @@ struct asymmetricVertex {
             auto ref_offset = 0;
             auto out_offset = 0;
             auto head = reinterpret_cast<uint32_t *>(out)[0];
-            auto prev_scalar = head;
+            uint32_t prev_scalar[1] = { head };
             ref[ref_offset] = head;
             out_offset += sizeof(uint32_t);
             if (fakeOutDegree > 1) {
@@ -275,17 +275,17 @@ struct asymmetricVertex {
                 if (n_blocks) {
                     out_offset += (n_blocks + 1) / 2;
 
-                    auto prev = _mm256_broadcastd_epi32(*reinterpret_cast<__m128i *>(&prev_scalar));
+                    auto prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
                     uint32_t xs[8] __attribute__((aligned(256)));
                     for (auto i = 0; i < n_blocks; i++) {
-                        auto s = (out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111;
+                        auto s = ((out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111) * 2;
                         auto curr = _mm256_load_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s, xs)));
                         _mm256_storeu_si256(reinterpret_cast<__m256i *>(ref + ref_offset),
                             _mm256_add_epi32(prev, curr));
                         out_offset += s;
                         ref_offset += 8;
-                        prev_scalar = ref[ref_offset - 1];
-                        prev = _mm256_broadcastd_epi32(*reinterpret_cast<__m128i *>(&prev_scalar));
+                        *prev_scalar = ref[ref_offset - 1];
+                        prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
                     }
                 }
 
@@ -294,13 +294,13 @@ struct asymmetricVertex {
                     out_offset++;
                     for (; ref_offset < fakeOutDegree; ref_offset++) {
                         if (out[flag_idx] >> (7 - (fakeOutDegree - ref_offset)) & 0b00000001) {
-                            prev_scalar += reinterpret_cast<uint32_t *>(out + out_offset)[0];
+                            *prev_scalar += reinterpret_cast<uint32_t *>(out + out_offset)[0];
                             out_offset += 4;
                         } else {
-                            prev_scalar += reinterpret_cast<uint16_t *>(out + out_offset)[0];
+                            *prev_scalar += reinterpret_cast<uint16_t *>(out + out_offset)[0];
                             out_offset += 2;
                         }
-                        ref[ref_offset] = prev_scalar;
+                        ref[ref_offset] = *prev_scalar;
                     }
                 }
             }

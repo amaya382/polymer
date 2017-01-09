@@ -575,7 +575,7 @@ inline uint8_t calc_container_size(uint_t *xs, uint8_t size) {
     for (auto i = 0; i < size; i++) {
         res = std::min(res, _lzcnt_u32(xs[i]));
     }
-    return BIT_SIZE_OF_T - res;
+    return ((BIT_SIZE_OF_T - res + 1) / 2) * 2; // TODO
 }
 
 template<typename uint_t = uint32_t>
@@ -606,7 +606,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
         auto in_offset = 0;
         auto out_offset = 0;
         auto head = in[in_offset];
-        auto prev_scalar = head;
+        uint32_t prev_scalar[1] = { head };
         reinterpret_cast<uint32_t *>(out)[0] = head;
         in_offset += 1;
         out_offset += sizeof(uint32_t);
@@ -619,19 +619,19 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                 }
                 out_offset += flag_size; // for flags
 
-                auto prev = _mm256_broadcastd_epi32(*reinterpret_cast<__m128i *>(&prev_scalar));
+                auto prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
                 uint32_t xs[8] __attribute__((aligned(256)));
                 for (auto i = 0; i < n_blocks; i++) {
                     auto curr = _mm256_loadu_si256(reinterpret_cast<__m256i *>(in + in_offset));
                     auto diff = _mm256_sub_epi32(curr, prev);
                     _mm256_store_si256(reinterpret_cast<__m256i *>(xs), diff);
                     auto s = calc_container_size(xs, 8);
-                    out[sizeof(uint32_t) + (i / 2)] |= s << (i % 2) * 4;
+                    out[sizeof(uint32_t) + (i / 2)] |= (s / 2) << (i % 2) * 4;
                     pack(xs, s, out + out_offset);
                     out_offset += s;
                     in_offset += 8;
-                    prev_scalar = in[in_offset - 1]; // in_offset?
-                    prev = _mm256_broadcastd_epi32(*reinterpret_cast<__m128i *>(&prev_scalar));
+                    *prev_scalar = in[in_offset - 1]; // in_offset?
+                    prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
                 }
             }
 
@@ -640,15 +640,15 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                 out[flag_idx] = 0;
                 out_offset++;
                 for (; in_offset < size; in_offset++) {
-                    if (in[in_offset] - prev_scalar <= 0xFFFF) {
-                        reinterpret_cast<uint16_t *>(out + out_offset)[0] = in[in_offset] - prev_scalar;
+                    if (in[in_offset] - *prev_scalar <= 0xFFFF) {
+                        reinterpret_cast<uint16_t *>(out + out_offset)[0] = in[in_offset] - *prev_scalar;
                         out_offset += 2;
                     } else {
-                        reinterpret_cast<uint32_t *>(out + out_offset)[0] = in[in_offset] - prev_scalar;
+                        reinterpret_cast<uint32_t *>(out + out_offset)[0] = in[in_offset] - *prev_scalar;
                         out_offset += 4;
                         out[flag_idx] |= 0b00000001 << (7 - (size - in_offset));
                     }
-                    prev_scalar = in[in_offset];
+                    *prev_scalar = in[in_offset];
                 }
             }
         }
