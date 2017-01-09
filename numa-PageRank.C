@@ -266,7 +266,7 @@ void *PageRankSubWorker(void *arg) {
 
     cerr << "On " + to_string(sched_getcpu()) + "\n";
 
-    intE *nghs = (intE *)numa_alloc_local(sizeof(intE)*2000);
+    intE *nghs = (intE *)numa_alloc_local(sizeof(intE)*2000) __attribute__((aligned(256)));
 
     pthread_barrier_t *local_barr = my_arg->node_barr;
     LocalFrontier *output = my_arg->localFrontier;
