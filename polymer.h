@@ -582,6 +582,9 @@ template<typename uint_t = uint32_t>
 inline void pack(uint_t *in, uint8_t n_bits, uint8_t *out, uint8_t size = 8) {
     constexpr auto BIT_SIZE_OF_T = sizeof(uint_t) * 8;
     auto *_out = reinterpret_cast<uint_t *>(out);
+    for (auto i = 0; i < (n_bits * size + BIT_SIZE_OF_T - 1) / BIT_SIZE_OF_T; i++) {
+        _out[i] = 0;
+    }
     uint8_t acc = n_bits;
     for (auto i = 0; i < size; i++, acc += n_bits) {
         auto block = acc / BIT_SIZE_OF_T;
@@ -591,7 +594,7 @@ inline void pack(uint_t *in, uint8_t n_bits, uint8_t *out, uint8_t size = 8) {
             _out[block] = in[i] >> (n_bits - surplus);
         } else {
             if (!(acc % BIT_SIZE_OF_T)) {
-                block--;
+                _out[block - 1] |= in[i] << (BIT_SIZE_OF_T - n_bits);
             }
             _out[block] |= in[i] << ((acc % BIT_SIZE_OF_T) - n_bits);
         }
