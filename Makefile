@@ -43,7 +43,7 @@ debug: PCFLAGS = -fcilkplus -lcilkrts -O0 -g -DCILK $(INTT) $(INTE)
 debug: all
 
 % : %.C $(COMMON)
-	$(PCC) $(PCFLAGS) -o $@ $< $(LIBS_I_NEED) -std=c++14 -mavx2 -DTYPE=5
+	$(PCC) $(PCFLAGS) -o $@ $< $(LIBS_I_NEED) -std=c++14 -mavx2 -mlzcnt -DTYPE=5
 
 .PHONY : clean
 
