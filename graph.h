@@ -280,7 +280,7 @@ struct asymmetricVertex {
                     for (auto i = 0; i < n_blocks; i++) {
                         auto s = ((out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111) * 2;
                         auto curr = _mm256_load_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s, xs)));
-                        _mm256_store_si256(reinterpret_cast<__m256i *>(ref + ref_offset),
+                        _mm256_storeu_si256(reinterpret_cast<__m256i *>(ref + ref_offset),
                             _mm256_add_epi32(prev, curr));
                         out_offset += s;
                         ref_offset += 8;
