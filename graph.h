@@ -244,7 +244,7 @@ struct asymmetricVertex {
         auto *_packed = reinterpret_cast<uint_t>(packed);
         auto mask = 0xFFFFFFFF;
         uint8_t xs[8];
-        uint8_t acc = n_bits
+        uint8_t acc = n_bits;
         for (auto i = 0; i < size; i++, acc += n_bits) {
             auto block = acc / BIT_SIZE_OF_T;
             auto surplus = acc % BIT_SIZE_OF_T < n_bits ? acc % BIT_SIZE_OF_T % n_bits : 0;
@@ -275,7 +275,7 @@ struct asymmetricVertex {
                 if (n_blocks) {
                     out_offset += (n_blocks + 1) / 2;
 
-                    auto prev = _mm256_broadcastd_epi32(prev_scalar);
+                    auto prev = _mm256_broadcastd_epi32(static_cast<__m128i>(prev_scalar));
                     for (auto i = 0; i < n_blocks; i++) {
                         auto s = (out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111;
                         auto curr = _mm256_loadu_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s)));
@@ -284,7 +284,7 @@ struct asymmetricVertex {
                         out_offset += s;
                         ref_offset += 8;
                         prev_scalar = ref[ref_offset - 1];
-                        prev = _mm256_broadcastd_epi32(prev_scalar);
+                        prev = _mm256_broadcastd_epi32(static_cast<__m128i>(prev_scalar));
                     }
                 }
 
