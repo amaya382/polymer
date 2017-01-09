@@ -582,7 +582,8 @@ template<typename uint_t = uint32_t>
 inline void pack(uint_t *in, uint8_t n_bits, uint8_t *out, uint8_t size = 8) {
     constexpr auto BIT_SIZE_OF_T = sizeof(uint_t) * 8;
     auto *_out = reinterpret_cast<uint_t *>(out);
-    for (auto i = 0, uint8_t acc = n_bits; i < size; i++, acc += n_bits) {
+    uint8_t acc = n_bits;
+    for (auto i = 0; i < size; i++, acc += n_bits) {
         auto block = acc / BIT_SIZE_OF_T;
         auto surplus = acc % BIT_SIZE_OF_T < n_bits ? acc % BIT_SIZE_OF_T % n_bits : 0;
         if (surplus) { // && block > 0 (?)
@@ -615,7 +616,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                 }
                 out_offset += flag_size; // for flags
 
-                auto prev = _mm256_broadcastd_epi32(reinterpret_cast<__m128i>(prev_scalar));
+                auto prev = _mm256_broadcastd_epi32(*reinterpret_cast<__m128i *>(&prev_scalar));
                 for (auto i = 0; i < n_blocks; i++) {
                     auto curr = _mm256_loadu_si256(reinterpret_cast<__m256i *>(in + in_offset));
                     auto diff = _mm256_sub_epi32(curr, prev);
@@ -625,7 +626,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                     out_offset += s;
                     in_offset += 8
                     prev_scalar = in[in_offset - 1]; // in_offset?
-                    prev = _mm256_broadcastd_epi32(reinterpret_cast<__m128i>(prev_scalar));
+                    prev = _mm256_broadcastd_epi32(*reinterpret_cast<__m128i *>(&prev_scalar));
                 }
             }
 
