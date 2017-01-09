@@ -571,7 +571,7 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
 template<typename uint_t = uint32_t>
 inline uint8_t calc_container_size(uint_t *xs, uint8_t size) {
     constexpr auto BIT_SIZE_OF_T = sizeof(uint_t) * 8;
-    auto res = BIT_SIZE_OF_T;
+    uint32_t res = BIT_SIZE_OF_T;
     for (auto i = 0; i < size; i++) {
         res = std::min(res, _lzcnt_u32(xs[i]));
     }
