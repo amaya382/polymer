@@ -267,7 +267,7 @@ struct asymmetricVertex {
             auto out_offset = 0;
             auto head = reinterpret_cast<uint32_t *>(out)[0];
             uint32_t prev_scalar[1] = { head };
-            ref[ref_offset] = head;
+            ref[ref_offset++] = head;
             out_offset += sizeof(uint32_t);
             if (fakeOutDegree > 1) {
                 auto n_blocks = (fakeOutDegree - 1) / 8;

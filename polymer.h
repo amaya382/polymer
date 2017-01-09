@@ -605,10 +605,9 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
     if (size > 0) {
         auto in_offset = 0;
         auto out_offset = 0;
-        auto head = in[in_offset];
+        auto head = in[in_offset++];
         uint32_t prev_scalar[1] = { head };
         reinterpret_cast<uint32_t *>(out)[0] = head;
-        in_offset += 1;
         out_offset += sizeof(uint32_t);
         if (size > 1) {
             auto n_blocks = (size - 1) / 8;
