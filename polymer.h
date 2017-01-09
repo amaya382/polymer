@@ -42,7 +42,7 @@
 #include <pthread.h>
 
 #include <algorithm>
-#include "simdcomp.h"
+#include <immintrin.h>
 
 using namespace std;
 
@@ -568,21 +568,85 @@ inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
     return size * 8; // byte
 }
 #elif TYPE == 5
-// SIMDCOMP
-template<typename uint_t>
-inline uint64_t encode(uint_t *in, uint64_t size, uint8_t *out) {
-    uint32_t head = 0;
-    if (size > 0) {
-        head = in[0];
-        memcpy(out, &head, 4);
-        if (size > 1) {
-            uint32_t b1 = simdmaxbitsd1(head, in + 1);
-            memcpy(out + 4, &b1, 4);
-            simdpackwithoutmaskd1(head, reinterpret_cast<const __m128i*>(in + 1), out + 8, b1);
-            return sizeof(uint_t) + 4 + b1 * 32;
+template<typename uint_t = uint32_t>
+inline uint8_t calc_container_size(uint_t *xs, uint8_t size) {
+    constexpr auto BIT_SIZE_OF_T = sizeof(uint_t) * 8;
+    auto res = BIT_SIZE_OF_T;
+    for (auto i = 0; i < size; i++) {
+        res = std::min(res, _lzcnt_u32(xs[i]));
+    }
+    return BIT_SIZE_OF_T - res;
+}
+
+template<typename uint_t = uint32_t>
+inline void pack(uint_t *in, uint8_t n_bits, uint8_t *out, uint8_t size = 8) {
+    constexpr auto BIT_SIZE_OF_T = sizeof(uint_t) * 8;
+    auto *_out = reinterpret_cast<uint_t *>(out);
+    for (auto i = 0, uint8_t acc = n_bits; i < size; i++, acc += n_bits) {
+        auto block = acc / BIT_SIZE_OF_T;
+        auto surplus = acc % BIT_SIZE_OF_T < n_bits ? acc % BIT_SIZE_OF_T % n_bits : 0;
+        if (surplus) { // && block > 0 (?)
+            _out[block - 1] |= in[i] << (surplus - n_bits);
+            _out[block] = in[i] >> (n_bits - surplus);
         } else {
-            return 4;
+            if (!(acc % BIT_SIZE_OF_T)) {
+                block--;
+            }
+            _out[block] |= in[i] << ((acc % BIT_SIZE_OF_T) - n_bits);
         }
+    }
+}
+
+inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
+    if (size > 0) {
+        auto in_offset = 0;
+        auto out_offset = 0;
+        auto head = in[in_offset];
+        auto prev_scalar = head;
+        reinterpret_cast<uint32_t *>(out)[0] = head;
+        in_offset += 1;
+        out_offset += sizeof(uint32_t);
+        if (size > 1) {
+            auto n_blocks = (size - 1) / 8;
+            if (n_blocks) {
+                auto flag_size = (n_blocks + 1) / 2;
+                for (auto i = 0; i < flag_size; i++) {
+                    out[sizeof(uint32_t) + i] = 0;
+                }
+                out_offset += flag_size; // for flags
+
+                auto prev = _mm256_broadcastd_epi32(prev_scalar);
+                for (auto i = 0; i < n_blocks; i++) {
+                    auto curr = _mm256_loadu_si256(reinterpret_cast<__m256i *>(in + in_offset));
+                    auto diff = _mm256_sub_epi32(curr, prev);
+                    auto s = calc_container_size(reinterpret_cast<uint32_t *>(diff), 8);
+                    out[sizeof(uint32_t) + (i / 2)] |= s << (i % 2) * 4;
+                    pack(reinterpret_cast<uint32_t *>(diff), s, out + out_offset);
+                    out_offset += s;
+                    in_offset += 8
+                    prev_scalar = in[in_offset - 1]; // in_offset?
+                    prev = _mm256_broadcastd_epi32(prev_scalar);
+                }
+            }
+
+            if (size - in_offset > 0) {
+                auto flag_idx = out_offset;
+                out[flag_idx] = 0;
+                out_offset++;
+                for (; in_offset < size; in_offset++) {
+                    if (in[in_offset] - prev_scalar <= 0xFFFF) {
+                        reinterpret_cast<uint16_t *>(out + out_offset)[0] = in[in_offset] - prev_scalar;
+                        out_offset += 2;
+                    } else {
+                        reinterpret_cast<uint32_t *>(out + out_offset)[0] = in[in_offset] - prev_scalar;
+                        out_offset += 4;
+                        out[flag_idx] |= 0b00000001 << (7 - (size - in_offset));
+                    }
+                    prev_scalar = in[in_offset];
+                }
+            }
+        }
+        return out_offset;
     } else {
         return 0;
     }
@@ -642,6 +706,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
     uint64_t in_consumed = 0; // byte
 
     // TODO: parallelize, divide into (CORES_PER_NODE) chunks and pack one array by shifting(?)
+#if TYPE != 5
     for (intT i = 0; i < GA.n; i++) {
         intT out_degree = V[i].getOutDegree();
         intT curr_out_ngh = 0;
@@ -673,6 +738,35 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
         newVertexSet[i].setInNeighbors(&in_edges[in_consumed]);
         in_consumed += in_used;
     }
+#else
+    for (intT i = 0; i < GA.n; i++) {
+        intT out_degree = V[i].getOutDegree();
+        intT out_ngh = 0;
+        intT out_counter = 0;
+        for (intT j = 0; j < out_degree; j++) {
+            out_ngh = V[i].getOutNeighbor(j);
+            if (rangeLow <= out_ngh && out_ngh < rangeHi) {
+                out_buf[out_counter++] = out_ngh;
+            }
+        }
+        uint64_t out_used = encode(out_buf, out_counter, &out_edges[out_consumed]);
+        newVertexSet[i].setOutNeighbors(&out_edges[out_consumed]);
+        out_consumed += out_used;
+
+        intT in_degree = V[i].getInDegree();
+        intT in_ngh = 0;
+        intT in_counter = 0;
+        for (intT j = 0; j < in_degree; j++) {
+            in_ngh = V[i].getInNeighbor(j);
+            if (rangeLow <= in_ngh && in_ngh < rangeHi) {
+                in_buf[in_counter++] = in_ngh;
+            }
+        }
+        uint64_t in_used = encode(in_buf, in_counter, &in_edges[in_consumed]);
+        newVertexSet[i].setInNeighbors(&in_edges[in_consumed]);
+        in_consumed += in_used;
+    }
+#endif
 
     numa_free(counters, sizeof(int) * GA.n);
     numa_free(inCounters, sizeof(int) * GA.n);

@@ -6,8 +6,7 @@
 #include <vector>
 #include <cstring>
 #include <functional>
-
-#include "simdcomp.h"
+#include <immintrin.h>
 
 using namespace std;
 
@@ -238,13 +237,69 @@ struct asymmetricVertex {
         }
     }
 #elif TYPE == 5
-    void getOutNghs(uintE *ref) {
-        uintT head = 0;
+    // TODO: probably too slow
+    template<typename uint_t = uint32_t>
+    uint_t *unpack(uint8_t *packed, uint8_t n_bits, uint8_t size = 8) {
+        constexpr auto BIT_SIZE_OF_T = sizeof(uint_t) * 8;
+        auto *_packed = reinterpret_cast<uint_t>(packed);
+        auto mask = 0xFFFFFFFF;
+        uint8_t xs[8];
+        for (auto i = 0; uint8_t acc = n_bits; i < size; i++, acc += n_bits) {
+            auto block = acc / BIT_SIZE_OF_T;
+            auto surplus = acc % BIT_SIZE_OF_T < n_bits ? acc % BIT_SIZE_OF_T % n_bits : 0;
+            if (surplus) {
+                xs[i] = _packed[block - 1] >> (32 - (n_bits - surplus));
+                xs[i] |= (_packed[block] & (mask >> (32 - surplus))) << (n_bits - surplus);
+            } else {
+                if (!(acc % BIT_SIZE_OF_T)) {
+                    block--;
+                }
+                xs[i] |= _packed[i] << ((acc % BIT_SIZE_OF_T) - n_bits);
+            }
+        }
+        return xs;
+    }
+
+    void getOutNghs(uint32_t *ref) {
         if (fakeOutDegree > 0) {
-            ref[0] = (reinterpret_cast<uintT *>(out))[0];
+            auto ref_offset = 0;
+            auto out_offset = 0;
+            auto head = reinterpret_cast<uint32_t *>(out)[0];
+            auto prev_scalar = head;
+            ref[ref_offset] = head;
+            out_offset += 1;
             if (fakeOutDegree > 1) {
-                auto b = (reinterpret_cast<uint32_t *>(out))[1];
-                simdunpackd1(head, reinterpret_cast<const __m128i*>(out + sizeof(uintT)), ref + 1, b);
+                auto n_blocks = (fakeOutDegree - 1) / 8;
+
+                if (n_blocks) {
+                    out_offset += (n_blocks + 1) / 2;
+
+                    auto prev = _mm256_broadcastd_epi32(prev_scalar);
+                    for (auto i = 0; i < n_blocks; i++) {
+                        auto s = (out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111;
+                        auto curr = _mm256_loadu_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset)));
+                        _mm256_store_si256(reinterpret_cast<__m256i *>(ref + ref_offset),
+                            _mm256_add_epi32(prev, curr));
+                        out_offset += s;
+                        ref_offset += 8;
+                        prev_scalar = ref[ref_offset - 1];
+                        prev = _mm256_broadcastd_epi32(prev_scalar);
+                    }
+                }
+
+                if (fakeOutDegree - out_offset > 0) {
+                    auto flag_idx = out_offset;
+                    for (; ref_offset < fakeOutDegree; ref_offset++) {
+                        if (out[i + 8] >> (7 - (size - in_offset)) & 0b00000001) {
+                            prev_scalar += reinterpret_cast<uint32_t *>(out + out_offset)[0];
+                            out_offset += 4;
+                        } else {
+                            prev_scalar += reinterpret_cast<uint16_t *>(out + out_offset)[0];
+                            out_offset += 2;
+                        }
+                        ref[ref_offset] = prev_scalar;
+                    }
+                }
             }
         } else {
             return;
