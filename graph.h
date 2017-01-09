@@ -275,10 +275,10 @@ struct asymmetricVertex {
                     out_offset += (n_blocks + 1) / 2;
 
                     auto prev = _mm256_broadcastd_epi32(*reinterpret_cast<__m128i *>(&prev_scalar));
-                    uint32_t xs[8];
+                    uint32_t xs[8] __attribute__((aligned(256)));
                     for (auto i = 0; i < n_blocks; i++) {
                         auto s = (out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111;
-                        auto curr = _mm256_loadu_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s, xs)));
+                        auto curr = _mm256_load_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s, xs)));
                         _mm256_store_si256(reinterpret_cast<__m256i *>(ref + ref_offset),
                             _mm256_add_epi32(prev, curr));
                         out_offset += s;
