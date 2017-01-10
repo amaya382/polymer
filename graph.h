@@ -334,7 +334,7 @@ struct asymmetricVertex {
 						for (auto j = 0; j < 8; j++) {
 							f(xs[i]);
 						}
-						ret_offset += 8;
+						ref_offset += 8;
 						out_offset += s;
 						*prev_scalar = xs[7];
 						prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
