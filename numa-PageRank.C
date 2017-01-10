@@ -233,6 +233,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
                 f.updateValVer(i, val, ngh);
             });
 #else
+			/*
             auto d = G[i].getFakeDegree();
             G[i].getOutNghs(nghs);
             for (intE i = 0; i < d; i++) {
@@ -241,6 +242,10 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
 //                }
                 f.updateValVer(i, val, nghs[i]);
             }
+			*/
+			G[i].traverseOutNgh([&f, i, val](uintT ngh) {
+				f.updateValVer(i, val, ngh);
+			});
 #endif
         }
     }

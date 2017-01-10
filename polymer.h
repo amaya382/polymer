@@ -589,7 +589,7 @@ inline void pack(uint_t *in, uint8_t n_bits, uint8_t *out, uint8_t size = 8) {
     for (auto i = 0; i < size; i++, acc += n_bits) {
         auto block = acc / BIT_SIZE_OF_T;
         auto surplus = acc % BIT_SIZE_OF_T < n_bits ? acc % BIT_SIZE_OF_T % n_bits : 0;
-        if (surplus) { // && block > 0 (?)
+        if (surplus) {
             _out[block - 1] |= in[i] << (surplus - n_bits);
             _out[block] = in[i] >> (n_bits - surplus);
         } else {
