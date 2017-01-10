@@ -308,60 +308,60 @@ struct asymmetricVertex {
             return;
         }
     }
-	template<typename Func>
-	void traverseOutNgh(Func f) {
-		if (fakeOutDegree > 0) {
-			auto ref_offset = 0;
-			auto out_offset = 0;
-			auto head = reinterpret_cast<uint32_t *>(out)[0];
-			uint32_t prev_scalar[1] = { head };
-			f(head);
-			ref_offset++;
-			out_offset += sizeof(uint32_t);
-			if (fakeOutDegree > 1) {
-				auto n_blocks = (fakeOutDegree - 1) / 8;
+    template<typename Func>
+    void traverseOutNgh(Func f) {
+        if (fakeOutDegree > 0) {
+            auto ref_offset = 0;
+            auto out_offset = 0;
+            auto head = reinterpret_cast<uint32_t *>(out)[0];
+            uint32_t prev_scalar[1] = { head };
+            f(head);
+            ref_offset++;
+            out_offset += sizeof(uint32_t);
+            if (fakeOutDegree > 1) {
+                auto n_blocks = (fakeOutDegree - 1) / 8;
 
-				if (n_blocks) {
-					out_offset += (n_blocks + 1) / 2;
+                if (n_blocks) {
+                    out_offset += (n_blocks + 1) / 2;
 
-					auto prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
-					alignas(256) uint32_t xs[8];
-					for (auto i = 0; i < n_blocks; i++) {
-						auto s = ((out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111) * 2;
-						auto curr = _mm256_load_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s, xs)));
-						_mm256_storeu_si256(reinterpret_cast<__m256i *>(xs),
-							_mm256_add_epi32(prev, curr));
-						for (auto j = 0; j < 8; j++) {
-							f(xs[i]);
-						}
-						ref_offset += 8;
-						out_offset += s;
-						*prev_scalar = xs[7];
-						prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
-					}
-				}
+                    auto prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
+                    alignas(256) uint32_t xs[8];
+                    for (auto i = 0; i < n_blocks; i++) {
+                        auto s = ((out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111) * 2;
+                        auto curr = _mm256_load_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s, xs)));
+                        _mm256_storeu_si256(reinterpret_cast<__m256i *>(xs),
+                            _mm256_add_epi32(prev, curr));
+                        for (auto j = 0; j < 8; j++) {
+                            f(xs[i]);
+                        }
+                        ref_offset += 8;
+                        out_offset += s;
+                        *prev_scalar = xs[7];
+                        prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
+                    }
+                }
 
-				if (fakeOutDegree - ref_offset > 0) {
-					auto flag_idx = out_offset;
-					out_offset++;
-					for (; ref_offset < fakeOutDegree; ref_offset++) {
-						if (out[flag_idx] >> (7 - (fakeOutDegree - ref_offset)) & 0b00000001) {
-							*prev_scalar += reinterpret_cast<uint32_t *>(out + out_offset)[0];
-							out_offset += 4;
-						}
-						else {
-							*prev_scalar += reinterpret_cast<uint16_t *>(out + out_offset)[0];
-							out_offset += 2;
-						}
-						f(*prev_scalar);
-					}
-				}
-			}
-		}
-		else {
-			return;
-		}
-	}
+                if (fakeOutDegree - ref_offset > 0) {
+                    auto flag_idx = out_offset;
+                    out_offset++;
+                    for (; ref_offset < fakeOutDegree; ref_offset++) {
+                        if (out[flag_idx] >> (7 - (fakeOutDegree - ref_offset)) & 0b00000001) {
+                            *prev_scalar += reinterpret_cast<uint32_t *>(out + out_offset)[0];
+                            out_offset += 4;
+                        }
+                        else {
+                            *prev_scalar += reinterpret_cast<uint16_t *>(out + out_offset)[0];
+                            out_offset += 2;
+                        }
+                        f(*prev_scalar);
+                    }
+                }
+            }
+        }
+        else {
+            return;
+        }
+    }
 #endif
 
     void getOutNgh(uintE *data, uint64_t size){ decode<uintE>(out,size,data);}
