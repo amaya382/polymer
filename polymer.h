@@ -619,7 +619,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                 out_offset += flag_size; // for flags
 
                 auto prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
-                uint32_t xs[8] __attribute__((aligned(256)));
+                alignas(256) uint32_t xs[8];
                 for (auto i = 0; i < n_blocks; i++) {
                     auto curr = _mm256_loadu_si256(reinterpret_cast<__m256i *>(in + in_offset));
                     auto diff = _mm256_sub_epi32(curr, prev);
@@ -629,7 +629,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                     pack(xs, s, out + out_offset);
                     out_offset += s;
                     in_offset += 8;
-                    *prev_scalar = in[in_offset - 1]; // in_offset?
+                    *prev_scalar = in[in_offset - 1];
                     prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
                 }
             }

@@ -276,7 +276,7 @@ struct asymmetricVertex {
                     out_offset += (n_blocks + 1) / 2;
 
                     auto prev = _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
-                    uint32_t xs[8] __attribute__((aligned(256)));
+                    alignas(256) uint32_t xs[8];
                     for (auto i = 0; i < n_blocks; i++) {
                         auto s = ((out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111) * 2;
                         auto curr = _mm256_load_si256(reinterpret_cast<__m256i *>(unpack(out + out_offset, s, xs)));
