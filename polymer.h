@@ -701,12 +701,13 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                     out[sizeof(uint32_t) + i] = 0; // 0fill: flags and first block
                 }
                 out_offset += flag_size; // for flags
+                out_offset += YMM_BYTE; // for first block
 
                 auto n_used_bits = 0;
                 auto prev = _mm256_broadcastd_epi32(
                     _mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
                 alignas(256) uint32_t xs[8];
-                for (auto i = 0, out_offset += YMM_BYTE; i < n_blocks; i++) {
+                for (auto i = 0; i < n_blocks; i++) {
                     auto curr = _mm256_loadu_si256(
                         reinterpret_cast<__m256i *>(in + in_offset));
                     auto diff = _mm256_sub_epi32(curr, prev);
@@ -809,7 +810,7 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
     uint64_t in_consumed = 0; // byte
 
     // TODO: parallelize, divide into (CORES_PER_NODE) chunks and pack one array by shifting(?)
-#if TYPE != 5
+#if TYPE < 5
     for (intT i = 0; i < GA.n; i++) {
         intT out_degree = V[i].getOutDegree();
         intT curr_out_ngh = 0;
