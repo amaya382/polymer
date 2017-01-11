@@ -656,6 +656,111 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
         return 0;
     }
 }
+#elif TYPE == 6
+constexpr auto BIT_PER_BYTE = 8;
+constexpr auto YMM_BIT = 256;
+constexpr auto YMM_BYTE = YMM_BIT / BIT_PER_BYTE;
+constexpr auto BITSIZEOF_T = sizeof(uint32_t) * BIT_PER_BYTE;
+constexpr auto LENGTH = YMM_BIT / BITSIZEOF_T;
+constexpr auto BIT_PER_BOX = YMM_BIT / LENGTH;
+
+inline uint8_t calc_container_size(uint32_t *xs, uint8_t size) {
+    auto lz = _lzcnt_u32(xs[0]);
+    for (auto i = 1; i < size; i++) {
+        lz = std::min(lz, _lzcnt_u32(xs[i]));
+    }
+    return ((BITSIZEOF_T - lz + 1) / 2) * 2; // TODO
+}
+
+inline void pack(__m256i *in, uint8_t pack_size, uint8_t *out, uint8_t n_used_bits) {
+    const auto n_total_bits = n_used_bits + pack_size;
+    auto _out = reinterpret_cast<uint32_t *>(out);
+    uint32_t mask[1] = { 0xFFFFFFFFu >> BITSIZEOF_T - pack_size };
+    auto masked = _mm256_and_si256(in, 
+        _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
+    auto buf = _mm256_load_si256(_out);
+    buf = _mm256_or_si256(buf, _mm256_slli_epi32(masked, n_used_bits));
+    _mm256_store_si256(reinterpret_cast<__m256i *>(_out), buf);
+
+    if (n_total_bits > BIT_PER_BOX) {
+        for (int i = 0; i < LENGTH; i++) {
+            _out[LENGTH + i] = 0; // 0fill
+        }
+
+        _mm256_store_si256(reinterpret_cast<__m256i *>(_out + LENGTH),
+            _mm256_srli_epi32(masked, n_total_bits - BIT_PER_BOX));
+    }
+}
+
+inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
+    if (size > 0) {
+        auto in_offset = 0;
+        auto out_offset = 0;
+        auto head = in[in_offset++];
+        uint32_t prev_scalar[1] = { head };
+        reinterpret_cast<uint32_t *>(out)[0] = head;
+        out_offset += sizeof(uint32_t);
+        if (size > 1) {
+            auto n_blocks = (size - 1) / 8;
+            if (n_blocks) {
+                auto flag_size = (n_blocks + 1) / 2;
+                for (auto i = 0; i < flag_size + 1; i++) {
+                    out[sizeof(uint32_t) + i] = 0; // 0fill: flags and first block
+                }
+                out_offset += flag_size; // for flags
+
+                auto n_used_bits = 0;
+                auto prev = _mm256_broadcastd_epi32(
+                    _mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
+                alignas(256) uint32_t xs[8];
+                for (auto i = 0, out_offset += YMM_BYTE; i < n_blocks; i++) {
+                    auto curr = _mm256_loadu_si256(
+                        reinterpret_cast<__m256i *>(in + in_offset));
+                    auto diff = _mm256_sub_epi32(curr, prev);
+                    pack(diff, s, out + out_offset, n_used_bits);
+
+                    _mm256_store_si256(reinterpret_cast<__m256i *>(xs), diff); // TODO: reg only
+                    auto s = calc_container_size(xs, 8);
+                    out[sizeof(uint32_t) + (i / 2)] |= (s / 2) << (i % 2) * 4; // flag
+
+                    n_used_bits += s;
+                    in_offset += 8;
+                    if (n_used_bits > BIT_PER_BOX && s > 0) {
+                        out_offset += YMM_BYTE;
+                        n_used_bits -= BIT_PER_BOX;
+                    }
+                    *prev_scalar = in[in_offset - 1];
+                    prev = _mm256_broadcastd_epi32(
+                        _mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
+                }
+            }
+
+            if (size - in_offset > 0) {
+                const auto flag_idx = out_offset;
+                out[flag_idx] = 0;
+                out_offset++;
+                for (; in_offset < size; in_offset++) {
+                    if (in[in_offset] - *prev_scalar <= 0xFFFF) {
+                        reinterpret_cast<uint16_t *>(out + out_offset)[0]
+                            = in[in_offset] - *prev_scalar;
+                        out_offset += 2;
+                    }
+                    else {
+                        reinterpret_cast<uint32_t *>(out + out_offset)[0]
+                            = in[in_offset] - *prev_scalar;
+                        out_offset += 4;
+                        out[flag_idx] |= 0b00000001 << (7 - (size - in_offset));
+                    }
+                    *prev_scalar = in[in_offset];
+                }
+            }
+        }
+        return out_offset;
+    }
+    else {
+        return 0;
+    }
+}
 #endif
 
 // create local graph (repack edges only in current node)
