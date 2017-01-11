@@ -375,11 +375,11 @@ struct asymmetricVertex {
         auto data = _mm256_srli_epi32(_mm256_load_si256(packed), n_used_bits);
 
         if (n_used_bits + pack_size > BIT_PER_BOX) {
-            uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T * 2 - n_used_bit - pack_size) };
+            uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T * 2 - n_used_bits - pack_size) };
             auto masked = _mm256_and_si256(_mm256_load_si256(packed + YMM_BYTE),
                 _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
-            data = _mm2256_or_si256(data,
-                _mm256_slli_epi32(masked, n_used_bit + pack_size - BITSIZEOF_T));
+            data = _mm256_or_si256(data,
+                _mm256_slli_epi32(masked, n_used_bits + pack_size - BITSIZEOF_T));
         } else {
             uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T - n_used_bits) };
             data = _mm256_and_si256(data,
@@ -412,7 +412,7 @@ struct asymmetricVertex {
                     alignas(256) uint32_t xs[8];
                     for (auto i = 0; i < n_blocks; i++) {
                         auto s = ((out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111) * 2;
-                        auto curr = unpack(out + out_offset, s);
+                        auto curr = unpack(out + out_offset, s, n_used_bits);
                         _mm256_storeu_si256(reinterpret_cast<__m256i *>(xs),
                             _mm256_add_epi32(prev, curr));
                         for (auto j = 0; j < 8; j++) {
