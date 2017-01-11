@@ -372,7 +372,8 @@ struct asymmetricVertex {
 
     inline __m256i *unpack(uint8_t *packed, uint8_t pack_size, uint8_t n_used_bits) {
         auto _packed = reinterpret_cast<uint32_t *>(packed);
-        auto data = _mm256_srli_epi32(_mm256_load_si256(packed), n_used_bits);
+        auto data = _mm256_srli_epi32(
+            _mm256_load_si256(reinterpret_cast<__m256i *>(packed)), n_used_bits);
 
         if (n_used_bits + pack_size > BIT_PER_BOX) {
             uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T * 2 - n_used_bits - pack_size) };
@@ -423,7 +424,7 @@ struct asymmetricVertex {
                         ref_offset += 8;
                         if (n_used_bits > BIT_PER_BOX && s > 0) {
                             out_offset += YMM_BYTE;
-                            n_used_bit -= BIT_PER_BOX;
+                            n_used_bits -= BIT_PER_BOX;
                         }
                         *prev_scalar = xs[7];
                         prev = _mm256_broadcastd_epi32(
