@@ -678,7 +678,7 @@ inline void pack(__m256i *in, uint8_t pack_size, uint8_t *out, uint8_t n_used_bi
     uint32_t mask[1] = { 0xFFFFFFFFu >> BITSIZEOF_T - pack_size };
     auto masked = _mm256_and_si256(in, 
         _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
-    auto buf = _mm256_load_si256(_out);
+    auto buf = _mm256_load_si256(reinterpret_cast<__m256i *>(_out));
     buf = _mm256_or_si256(buf, _mm256_slli_epi32(masked, n_used_bits));
     _mm256_store_si256(reinterpret_cast<__m256i *>(_out), buf);
 
