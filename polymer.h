@@ -665,7 +665,7 @@ inline uint8_t calc_container_size(uint32_t *xs, uint8_t size) {
     return ((BITSIZEOF_T - lz + 1) / 2) * 2; // TODO
 }
 
-inline void pack(__m256i *in, uint8_t pack_size, uint8_t *out, uint8_t n_used_bits) {
+inline void pack(__m256i in, uint8_t pack_size, uint8_t *out, uint8_t n_used_bits) {
     const auto n_total_bits = n_used_bits + pack_size;
     auto _out = reinterpret_cast<uint32_t *>(out);
     uint32_t mask[1] = { 0xFFFFFFFFu >> BITSIZEOF_T - pack_size };
@@ -711,10 +711,9 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                     auto curr = _mm256_loadu_si256(
                         reinterpret_cast<__m256i *>(in + in_offset));
                     auto diff = _mm256_sub_epi32(curr, prev);
-                    pack(diff, s, out + out_offset, n_used_bits);
-
                     _mm256_store_si256(reinterpret_cast<__m256i *>(xs), diff); // TODO: reg only
                     auto s = calc_container_size(xs, 8);
+                    pack(diff, s, out + out_offset, n_used_bits);
                     out[sizeof(uint32_t) + (i / 2)] |= (s / 2) << (i % 2) * 4; // flag
 
                     n_used_bits += s;
