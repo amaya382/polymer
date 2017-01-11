@@ -657,13 +657,6 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
     }
 }
 #elif TYPE == 6
-constexpr auto BIT_PER_BYTE = 8;
-constexpr auto YMM_BIT = 256;
-constexpr auto YMM_BYTE = YMM_BIT / BIT_PER_BYTE;
-constexpr auto BITSIZEOF_T = sizeof(uint32_t) * BIT_PER_BYTE;
-constexpr auto LENGTH = YMM_BIT / BITSIZEOF_T;
-constexpr auto BIT_PER_BOX = YMM_BIT / LENGTH;
-
 inline uint8_t calc_container_size(uint32_t *xs, uint8_t size) {
     auto lz = _lzcnt_u32(xs[0]);
     for (auto i = 1; i < size; i++) {
