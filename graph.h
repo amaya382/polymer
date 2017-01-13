@@ -370,22 +370,20 @@ struct asymmetricVertex {
         }
     }
 #elif TYPE == 6
-
-
     inline __m256i unpack(uint8_t *packed, uint8_t pack_size, uint8_t n_used_bits) {
         auto _packed = reinterpret_cast<uint32_t *>(packed);
         auto data = _mm256_srli_epi32(
-            _mm256_load_si256(reinterpret_cast<__m256i *>(packed)), n_used_bits);
+            _mm256_loadu_si256(reinterpret_cast<__m256i *>(packed)), n_used_bits);
 
         if (n_used_bits + pack_size > BIT_PER_BOX) {
-            uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T * 2 - n_used_bits - pack_size) };
+            alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T * 2 - n_used_bits - pack_size) };
             auto masked = _mm256_and_si256(
-                _mm256_load_si256(reinterpret_cast<__m256i *>(packed + YMM_BYTE)),
+                _mm256_loadu_si256(reinterpret_cast<__m256i *>(packed + YMM_BYTE)),
                 _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
             data = _mm256_or_si256(data,
                 _mm256_slli_epi32(masked, n_used_bits + pack_size - BITSIZEOF_T));
         } else {
-            uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T - n_used_bits) };
+            alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T - n_used_bits) };
             data = _mm256_and_si256(data,
                 _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
         }

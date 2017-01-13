@@ -668,19 +668,19 @@ inline uint8_t calc_container_size(uint32_t *xs, uint8_t size) {
 inline void pack(__m256i in, uint8_t pack_size, uint8_t *out, uint8_t n_used_bits) {
     const auto n_total_bits = n_used_bits + pack_size;
     auto _out = reinterpret_cast<uint32_t *>(out);
-    uint32_t mask[1] = { 0xFFFFFFFFu >> BITSIZEOF_T - pack_size };
+    alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> BITSIZEOF_T - pack_size };
     auto masked = _mm256_and_si256(in, 
         _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
-    auto buf = _mm256_load_si256(reinterpret_cast<__m256i *>(_out));
+    auto buf = _mm256_loadu_si256(reinterpret_cast<__m256i *>(_out));
     buf = _mm256_or_si256(buf, _mm256_slli_epi32(masked, n_used_bits));
-    _mm256_store_si256(reinterpret_cast<__m256i *>(_out), buf);
+    _mm256_storeu_si256(reinterpret_cast<__m256i *>(_out), buf);
 
     if (n_total_bits > BIT_PER_BOX) {
         for (int i = 0; i < LENGTH; i++) {
             _out[LENGTH + i] = 0; // 0fill
         }
 
-        _mm256_store_si256(reinterpret_cast<__m256i *>(_out + LENGTH),
+        _mm256_storeu_si256(reinterpret_cast<__m256i *>(_out + LENGTH),
             _mm256_srli_epi32(masked, n_total_bits - BIT_PER_BOX));
     }
 }
@@ -690,7 +690,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
         auto in_offset = 0;
         auto out_offset = 0;
         auto head = in[in_offset++];
-        uint32_t prev_scalar[1] = { head };
+        alignas(256) uint32_t prev_scalar[1] = { head };
         reinterpret_cast<uint32_t *>(out)[0] = head;
         out_offset += sizeof(uint32_t);
         if (size > 1) {
