@@ -657,6 +657,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
     }
 }
 #elif TYPE == 6
+/*
 inline uint8_t calc_container_size(uint32_t *xs, uint8_t size) {
     auto lz = _lzcnt_u32(xs[0]);
     for (auto i = 1; i < size; i++) {
@@ -664,7 +665,7 @@ inline uint8_t calc_container_size(uint32_t *xs, uint8_t size) {
     }
     return ((BITSIZEOF_T - lz + 1) / 2) * 2; // TODO
 }
-
+*/
 inline void pack(__m256i in, uint8_t pack_size, uint8_t *out, uint8_t n_used_bits) {
     const auto n_total_bits = n_used_bits + pack_size;
     auto _out = reinterpret_cast<uint32_t *>(out);
@@ -681,7 +682,7 @@ inline void pack(__m256i in, uint8_t pack_size, uint8_t *out, uint8_t n_used_bit
         }
 
         _mm256_storeu_si256(reinterpret_cast<__m256i *>(_out + LENGTH),
-            _mm256_srli_epi32(masked, n_total_bits - BIT_PER_BOX));
+            _mm256_srli_epi32(masked, BIT_PER_BOX - n_used_bits));
     }
 }
 
@@ -712,7 +713,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                         reinterpret_cast<__m256i *>(in + in_offset));
                     auto diff = _mm256_sub_epi32(curr, prev);
                     _mm256_store_si256(reinterpret_cast<__m256i *>(xs), diff); // TODO: reg only
-                    auto s = calc_container_size(xs, 8);
+                    auto s = ((BITSIZEOF_T - _lzcnt_u32(xs[7]) + 1) / 2) * 2;
                     pack(diff, s, out + out_offset, n_used_bits);
                     out[sizeof(uint32_t) + (i / 2)] |= (s / 2) << (i % 2) * 4; // flag
 
@@ -725,6 +726,10 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                     *prev_scalar = in[in_offset - 1];
                     prev = _mm256_broadcastd_epi32(
                         _mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
+                }
+
+                if (n_used_bits > 0) {
+                    out_offset += YMM_BYTE;
                 }
             }
 

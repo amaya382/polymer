@@ -431,6 +431,10 @@ struct asymmetricVertex {
                         prev = _mm256_broadcastd_epi32(
                             _mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
                     }
+
+                    if (n_used_bits > 0) {
+                        out_offset += YMM_BYTE;
+                    }
                 }
 
                 if (fakeOutDegree - ref_offset > 0) {
