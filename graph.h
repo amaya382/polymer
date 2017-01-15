@@ -381,7 +381,7 @@ struct asymmetricVertex {
                 _mm256_loadu_si256(reinterpret_cast<__m256i *>(_packed + LENGTH)),
                 _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
             data = _mm256_or_si256(data,
-                _mm256_slli_epi32(masked, n_used_bits + pack_size - BITSIZEOF_T));
+                _mm256_slli_epi32(masked, BITSIZEOF_T - n_used_bits));
         } else {
             alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T - pack_size) };
             data = _mm256_and_si256(data,
