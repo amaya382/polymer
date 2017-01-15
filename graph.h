@@ -373,17 +373,17 @@ struct asymmetricVertex {
     inline __m256i unpack(uint8_t *packed, uint8_t pack_size, uint8_t n_used_bits) {
         auto _packed = reinterpret_cast<uint32_t *>(packed);
         auto data = _mm256_srli_epi32(
-            _mm256_loadu_si256(reinterpret_cast<__m256i *>(packed)), n_used_bits);
+            _mm256_loadu_si256(reinterpret_cast<__m256i *>(_packed)), n_used_bits);
 
         if (n_used_bits + pack_size > BIT_PER_BOX) {
             alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T * 2 - n_used_bits - pack_size) };
             auto masked = _mm256_and_si256(
-                _mm256_loadu_si256(reinterpret_cast<__m256i *>(packed + YMM_BYTE)),
+                _mm256_loadu_si256(reinterpret_cast<__m256i *>(_packed + LENGTH)),
                 _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
             data = _mm256_or_si256(data,
                 _mm256_slli_epi32(masked, n_used_bits + pack_size - BITSIZEOF_T));
         } else {
-            alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T - n_used_bits) };
+            alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T - pack_size) };
             data = _mm256_and_si256(data,
                 _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
         }
@@ -406,7 +406,6 @@ struct asymmetricVertex {
 
                 if (n_blocks) {
                     out_offset += (n_blocks + 1) / 2; // for flags
-                    out_offset += YMM_BYTE; // for first block
 
                     auto n_used_bits = 0;
                     auto prev = _mm256_broadcastd_epi32(
@@ -418,7 +417,7 @@ struct asymmetricVertex {
                         _mm256_storeu_si256(reinterpret_cast<__m256i *>(xs),
                             _mm256_add_epi32(prev, curr));
                         for (auto j = 0; j < 8; j++) {
-                            f(xs[i]);
+                            f(xs[j]);
                         }
 
                         n_used_bits += s;

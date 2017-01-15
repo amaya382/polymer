@@ -702,7 +702,6 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                     out[sizeof(uint32_t) + i] = 0; // 0fill: flags and first block
                 }
                 out_offset += flag_size; // for flags
-                out_offset += YMM_BYTE; // for first block
 
                 auto n_used_bits = 0;
                 auto prev = _mm256_broadcastd_epi32(
