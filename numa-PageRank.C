@@ -42,8 +42,12 @@
 using namespace std;
 
 #define PAGE_SIZE (4096)
+int N_NODES = 0;
+int N_CORES_PER_NODE = 0;
+int N_USE_NODES = 0;
+int N_USE_CORES_PER_NODE = 0;
 
-int CORES_PER_NODE = 6;
+//int CORES_PER_NODE = 6;
 int NODE_USED = -1;
 
 volatile int shouldStart = 0;
@@ -53,7 +57,7 @@ double *p_next_global = NULL;
 
 double *p_ans = NULL;
 int vPerNode = 0;
-int numOfNode = 0;
+//int numOfNode = 0;
 
 bool needResult = false;
 
@@ -263,12 +267,11 @@ void *PageRankSubWorker(void *arg) {
 
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
-    int P_CORES_PER_NODE = CORES_PER_NODE / 2;
-    int offset = subTid < P_CORES_PER_NODE ? 0 : (numOfNode - 1) * P_CORES_PER_NODE;
+    int P_CORES_PER_NODE = N_CORES_PER_NODE / 2;
+    int offset = subTid < P_CORES_PER_NODE ? 0 : (N_NODES - 1) * P_CORES_PER_NODE;
     int core = tid * P_CORES_PER_NODE + subTid + offset;
     CPU_SET(core, &cpuset);
     sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
-
     cerr << "On " + to_string(sched_getcpu()) + "\n";
 
     intE *nghs = (intE *)numa_alloc_local(sizeof(intE)*2000);
@@ -288,9 +291,9 @@ void *PageRankSubWorker(void *arg) {
     int end = my_arg->endPos;
 
     Custom_barrier globalCustom(&global_counter, &global_toggle, Frontier->numOfNodes);
-    Custom_barrier localCustom(my_arg->barr_counter, my_arg->toggle, CORES_PER_NODE);
+    Custom_barrier localCustom(my_arg->barr_counter, my_arg->toggle, N_USE_CORES_PER_NODE);
 
-    Subworker_Partitioner subworker(CORES_PER_NODE);
+    Subworker_Partitioner subworker(N_USE_CORES_PER_NODE);
     subworker.tid = tid;
     subworker.subTid = subTid;
     subworker.dense_start = start;
@@ -354,14 +357,15 @@ void *PageRankSubWorker(void *arg) {
             //printf("next active: %d\n", output->m);
         }
 
-        vertexMap(Frontier, PR_Vertex_F(p_curr, p_next, damping, n), tid, subTid, CORES_PER_NODE);
+        vertexMap(Frontier, PR_Vertex_F(p_curr, p_next, damping, n),
+            tid, subTid, N_USE_CORES_PER_NODE);
         //vertexCounter(GA, output, tid, subTid, CORES_PER_NODE);
         output->m = 1;
 
         pthread_barrier_wait(&global_barr);
         //pthread_barrier_wait(local_barr);
 
-        vertexMap(Frontier, PR_Vertex_Reset(p_curr), tid, subTid, CORES_PER_NODE);
+        vertexMap(Frontier, PR_Vertex_Reset(p_curr), tid, subTid, N_USE_CORES_PER_NODE);
         pthread_barrier_wait(&global_barr);
         //pthread_barrier_wait(local_barr);
         swap(p_curr, p_next);
@@ -419,12 +423,12 @@ void *PageRankThread(void *arg) {
         GA.del();
     pthread_barrier_wait(&barr);
 
-    int sizeOfShards[CORES_PER_NODE];
+    int sizeOfShards[N_USE_CORES_PER_NODE];
 
-    subPartitionByDegree(localGraph, CORES_PER_NODE, sizeOfShards, sizeof(double), true, true);
+    subPartitionByDegree(localGraph, N_USE_CORES_PER_NODE, sizeOfShards, sizeof(double), true, true);
     //intT localDegrees = (intT *)malloc(sizeof(intT) * localGraph.n);
 
-    for (int i = 0; i < CORES_PER_NODE; i++) {
+    for (int i = 0; i < N_USE_CORES_PER_NODE; i++) {
         //printf("subPartition: %d %d: %d\n", tid, i, sizeOfShards[i]);
     }
 
@@ -491,16 +495,16 @@ void *PageRankThread(void *arg) {
         Frontier->calculateOffsets();
 
     pthread_barrier_t localBarr;
-    pthread_barrier_init(&localBarr, NULL, CORES_PER_NODE + 1);
+    pthread_barrier_init(&localBarr, NULL, N_USE_CORES_PER_NODE + 1);
 
     int startPos = 0;
 
-    pthread_t subTids[CORES_PER_NODE];
+    pthread_t subTids[N_USE_CORES_PER_NODE];
 
     volatile int local_custom_counter;
     volatile int local_toggle;
 
-    for (int i = 0; i < CORES_PER_NODE; i++) {
+    for (int i = 0; i < N_USE_CORES_PER_NODE; i++) {
         PR_subworker_arg *arg = (PR_subworker_arg *) malloc(sizeof(PR_subworker_arg));
         arg->GA = (void *) (&localGraph);
         arg->maxIter = maxIter;
@@ -592,20 +596,23 @@ struct PR_Hash_F {
 
 template<class vertex>
 void PageRank(graph<vertex> &GA, int maxIter) {
+    N_NODES = numa_num_configured_nodes();
+    N_CORES_PER_NODE = numa_num_configured_cpus() / N_NODES;
+
 //    numOfNode = numa_num_configured_nodes();
-    vPerNode = GA.n / numOfNode;
+    vPerNode = GA.n / N_USE_NODES;
 //    CORES_PER_NODE = numa_num_configured_cpus() / numOfNode;
     if (NODE_USED != -1)
-        numOfNode = NODE_USED;
-    pthread_barrier_init(&barr, NULL, numOfNode);
-    pthread_barrier_init(&timerBarr, NULL, numOfNode + 1);
-    pthread_barrier_init(&global_barr, NULL, CORES_PER_NODE * numOfNode);
+        N_USE_NODES = NODE_USED;
+    pthread_barrier_init(&barr, NULL, N_USE_NODES);
+    pthread_barrier_init(&timerBarr, NULL, N_USE_NODES + 1);
+    pthread_barrier_init(&global_barr, NULL, N_USE_CORES_PER_NODE * N_USE_NODES);
     pthread_mutex_init(&mut, NULL);
-    int sizeArr[numOfNode];
-    PR_Hash_F hasher(GA.n, numOfNode);
+    int sizeArr[N_USE_NODES];
+    PR_Hash_F hasher(GA.n, N_USE_NODES);
     //graphHasher(GA, hasher);
     //graphAllEdgeHasher(GA, hasher);
-    partitionByDegree(GA, numOfNode, sizeArr, sizeof(double));
+    partitionByDegree(GA, N_USE_NODES, sizeArr, sizeof(double));
     /*
     intT vertPerPage = PAGESIZE / sizeof(double);
     intT subShardSize = ((GA.n / numOfNode) / vertPerPage) * vertPerPage;
@@ -615,7 +622,7 @@ void PageRank(graph<vertex> &GA, int maxIter) {
     sizeArr[numOfNode - 1] = GA.n - subShardSize * (numOfNode - 1);
     */
     int accum = 0;
-    for (int i = 0; i < numOfNode; i++) {
+    for (int i = 0; i < N_USE_NODES; i++) {
         intT degreeSum = 0;
         for (intT j = accum; j < accum + sizeArr[i]; j++) {
             degreeSum += GA.V[j].getInDegree();
@@ -625,18 +632,18 @@ void PageRank(graph<vertex> &GA, int maxIter) {
     }
     //return;
 
-    p_curr_global = (double *) mapDataArray(numOfNode, sizeArr, sizeof(double));
-    p_next_global = (double *) mapDataArray(numOfNode, sizeArr, sizeof(double));
+    p_curr_global = (double *) mapDataArray(N_USE_NODES, sizeArr, sizeof(double));
+    p_next_global = (double *) mapDataArray(N_USE_NODES, sizeArr, sizeof(double));
 
-    cerr << "start create " + to_string(numOfNode) << "threads\n";
-    pthread_t tids[numOfNode];
+    cerr << "start create " + to_string(N_USE_NODES) << "threads\n";
+    pthread_t tids[N_USE_NODES];
     int prev = 0;
-    for (int i = 0; i < numOfNode; i++) {
+    for (int i = 0; i < N_USE_NODES; i++) {
         PR_worker_arg *arg = (PR_worker_arg *) malloc(sizeof(PR_worker_arg));
         arg->GA = (void *) (&GA);
         arg->maxIter = maxIter;
         arg->tid = i;
-        arg->numOfNode = numOfNode;
+        arg->numOfNode = N_USE_NODES;
         arg->rangeLow = prev;
         arg->rangeHi = prev + sizeArr[i];
         prev = prev + sizeArr[i];
@@ -649,7 +656,7 @@ void PageRank(graph<vertex> &GA, int maxIter) {
     //nextTime("Graph Partition");
     nextTime("partition over");
     cerr << "all created\n";
-    for (int i = 0; i < numOfNode; i++) {
+    for (int i = 0; i < N_USE_NODES; i++) {
         pthread_join(tids[i], NULL);
     }
     nextTime("PageRank");
@@ -671,8 +678,8 @@ int parallel_main(int argc, char *argv[]) {
 
     iFile = argv[1];
     maxIter = atoi(argv[2]);
-    numOfNode = atoi(argv[3]);
-    CORES_PER_NODE = atoi(argv[4]);
+    N_USE_NODES = atoi(argv[3]);
+    N_USE_CORES_PER_NODE = atoi(argv[4]);
 
 //    if (argc > 3) NODE_USED = atoi(argv[3]);
 //    if (argc > 4) if ((string) argv[4] == (string) "-result") needResult = true;
