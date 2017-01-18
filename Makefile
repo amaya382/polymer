@@ -23,7 +23,7 @@ PCFLAGS = -O3 -DCILKP $(INTT) $(INTE)
 
 else
 PCC = g++
-PCFLAGS = -O2 $(INTT) $(INTE)
+PCFLAGS = -O3 $(INTT) $(INTE)
 endif
 
 #PCFLAGS = -fcilkplus -lcilkrts -O2 -DCILK $(INTT) $(INTE)

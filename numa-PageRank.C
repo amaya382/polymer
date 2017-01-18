@@ -678,8 +678,9 @@ int parallel_main(int argc, char* argv[]) {
         const auto end = chrono::system_clock::now();
         chrono::duration<double> prepro = mid - start;
         chrono::duration<double> pr = end - mid;
-        cout << prepro.count() << endl;
-        cout << pr.count() << endl;
+        cout << "term0:" << prepro.count() << endl;
+        cout << "term1:" << pr.count() << endl;
+        cout << "total:" << prepro.count() + pr.count() << endl;
 	//G.del();
     }
     return 0;
