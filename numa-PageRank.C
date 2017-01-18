@@ -1,4 +1,4 @@
-/* 
+﻿/* 
  * This code is part of the project "NUMA-aware Graph-structured Analytics"
  * 
  *
@@ -690,11 +690,20 @@ int parallel_main(int argc, char *argv[]) {
         auto mid = get<0>(tup);
         auto end = get<1>(tup);
 
-        cout << getBytesReadFromMC(start, mid) << "\t" << getBytesReadFromMC(mid, end) << endl;
-        cout << getBytesWrittenToMC(start, mid) << "\t" << getBytesWrittenToMC(mid, end) << endl;
-        cout << getIORequestBytesFromMC(start, mid) << "\t" << getIORequestBytesFromMC(mid, end) << endl;
-        cout << getL2CacheHitRatio(start, mid) << "\t" << getL2CacheHitRatio(mid, end) << endl;
-        cout << getL3CacheHitRatio(start, mid) << "\t" << getL3CacheHitRatio(mid, end) << endl;
+        cout << getBytesReadFromMC(start, mid)
+            << "\t" << getBytesReadFromMC(mid, end) << endl;
+        cout << getBytesWrittenToMC(start, mid)
+            << "\t" << getBytesWrittenToMC(mid, end) << endl;
+        cout << getIORequestBytesFromMC(start, mid)
+            << "\t" << getIORequestBytesFromMC(mid, end) << endl;
+        cout << getL2CacheMisses(start, mid)
+            << "\t" << getL2CacheMisses(mid, end) << endl;
+        cout << getL3CacheMisses(start, mid)
+            << "\t" << getL3CacheMisses(mid, end) << endl;
+        cout << to_string(getL2CacheHitRatio(start, mid))
+            << "\t" << to_string(getL2CacheHitRatio(mid, end)) << endl;
+        cout << to_string(getL3CacheHitRatio(start, mid))
+            << "\t" << to_string(getL3CacheHitRatio(mid, end)) << endl;
 
         //G.del();
     }
