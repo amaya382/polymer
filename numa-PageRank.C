@@ -697,8 +697,8 @@ int parallel_main(int argc, char *argv[]) {
 
         chrono::duration<double> prepro = mid - start;
         chrono::duration<double> pr = end - mid;
-        cout << "preprocessing: " << prepro.count() << endl;
-        cout << "PR: " << pr.count() << endl;
+        cout << "term0: " << prepro.count() << endl;
+        cout << "term1: " << pr.count() << endl;
     }
     return 0;
 }
