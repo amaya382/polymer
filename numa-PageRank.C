@@ -32,6 +32,8 @@
 #include <numa.h>
 #include <sys/syscall.h>
 
+#include "cpucounters.h"
+
 //#include <papi.h>
 #define NUM_EVENTS 3
 
@@ -575,7 +577,7 @@ struct PR_Hash_F {
 };
 
 template<class vertex>
-void PageRank(graph<vertex> &GA, int maxIter) {
+tuple<SystemCounterState, SystemCounterState> PageRank(graph<vertex> &GA, int maxIter) {
     N_NODES = numa_num_configured_nodes();
     N_CORES_PER_NODE = numa_num_configured_cpus() / N_NODES;
 
@@ -635,11 +637,14 @@ void PageRank(graph<vertex> &GA, int maxIter) {
     pthread_barrier_wait(&timerBarr);
     //nextTime("Graph Partition");
     nextTime("partition over");
+    auto mid = getSystemCounterState();
+
     printf("all created\n");
     for (int i = 0; i < N_USE_NODES; i++) {
         pthread_join(tids[i], NULL);
     }
     nextTime("PageRank");
+    auto end = getSystemCounterState();
 
     if (needResult) {
         for (intT i = 0; i < GA.n; i++) {
@@ -647,6 +652,8 @@ void PageRank(graph<vertex> &GA, int maxIter) {
             //cout << i << "\t" << std::scientific << std::setprecision(9) << p_ans[i] << "\n";
         }
     }
+
+    return make_tuple(mid, end);
 }
 
 int parallel_main(int argc, char *argv[]) {
@@ -666,16 +673,29 @@ int parallel_main(int argc, char *argv[]) {
 //    if (argc > 5) if ((string) argv[5] == (string) "-s") symmetric = true;
 //    if (argc > 6) if ((string) argv[6] == (string) "-b") binary = true;
     numa_set_interleave_mask(numa_all_nodes_ptr);
+
+    PCM *m = PCM::getInstance();
+    m->program(PCM::DEFAULT_EVENTS, NULL);
+    auto start = getSystemCounterState();
     startTime();
     if (symmetric) {
-        graph<symmetricVertex> G =
-                readGraph<symmetricVertex>(iFile, symmetric, binary);
-        PageRank(G, maxIter);
+        //graph<symmetricVertex> G =
+                //readGraph<symmetricVertex>(iFile, symmetric, binary);
+        //PageRank(G, maxIter);
         //G.del();
     } else {
         graph<asymmetricVertex> G =
                 readGraph<asymmetricVertex>(iFile, symmetric, binary);
-        PageRank(G, maxIter);
+        auto tup = PageRank(G, maxIter);
+        auto mid = get<0>(tup);
+        auto end = get<1>(tup);
+
+        cout << getBytesReadFromMC(start, mid) << "\t" << getBytesReadFromMC(mid, end) << endl;
+        cout << getBytesWrittenToMC(start, mid) << "\t" << getBytesWrittenToMC(mid, end) << endl;
+        cout << getIORequestBytesFromMC(start, mid) << "\t" << getIORequestBytesFromMC(mid, end) << endl;
+        cout << getL2CacheHitRatio(start, mid) << "\t" << getL2CacheHitRatio(mid, end) << endl;
+        cout << getL3CacheHitRatio(start, mid) << "\t" << getL3CacheHitRatio(mid, end) << endl;
+
         //G.del();
     }
     return 0;

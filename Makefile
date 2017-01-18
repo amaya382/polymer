@@ -43,7 +43,7 @@ debug: PCFLAGS = -fcilkplus -lcilkrts -O0 -g -DCILK $(INTT) $(INTE)
 debug: all
 
 % : %.C $(COMMON)
-	$(PCC) $(PCFLAGS) -o $@ $< $(LIBS_I_NEED) -std=c++14
+	$(PCC) $(PCFLAGS) -o $@ $< $(LIBS_I_NEED) ./pcm/cpucounters.cpp ./pcm/msr.cpp ./pcm/pci.cpp ./pcm/client_bw.cpp -I ./pcm -std=c++14
 
 .PHONY : clean
 
