@@ -575,7 +575,9 @@ struct PR_Hash_F {
 
 template<class vertex>
 void PageRank(graph<vertex> &GA, int maxIter) {
-//    N_USE_NODES = numa_num_configured_nodes();
+    N_NODES = numa_num_configured_nodes();
+    N_CORES_PER_NODE = numa_num_configured_cpus() / N_NODES;
+
     vPerNode = GA.n / N_USE_NODES;
 //    N_USE_CORES_PER_NODE = numa_num_configured_cpus() / N_USE_NODES;
     if (NODE_USED != -1)
