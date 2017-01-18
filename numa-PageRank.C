@@ -32,8 +32,6 @@
 #include <numa.h>
 #include <sys/syscall.h>
 
-#include <chrono>
-
 //#include <papi.h>
 #define NUM_EVENTS 3
 
@@ -263,7 +261,7 @@ void *PageRankSubWorker(void *arg) {
     int core = tid * P_CORES_PER_NODE + subTid + offset;
     CPU_SET(core, &cpuset);
     sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpuset);
-    cerr << "On " + to_string(sched_getcpu()) + "\n";
+    //cerr << "On " + to_string(sched_getcpu()) + "\n";
 
     pthread_barrier_t *local_barr = my_arg->node_barr;
     LocalFrontier *output = my_arg->localFrontier;
@@ -675,18 +673,10 @@ int parallel_main(int argc, char *argv[]) {
         PageRank(G, maxIter);
         //G.del();
     } else {
-        const auto start = chrono::system_clock::now();
         graph<asymmetricVertex> G =
                 readGraph<asymmetricVertex>(iFile, symmetric, binary);
-        const auto mid = chrono::system_clock::now();
         PageRank(G, maxIter);
-        const auto end = chrono::system_clock::now();
         //G.del();
-
-        chrono::duration<double> prepro = mid - start;
-        chrono::duration<double> pr = end - mid;
-        cout << "term0: " << prepro.count() << endl;
-        cout << "term1: " << pr.count() << endl;
     }
     return 0;
 }
