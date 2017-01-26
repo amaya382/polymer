@@ -645,7 +645,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                     } else {
                         reinterpret_cast<uint32_t *>(out + out_offset)[0] = in[in_offset] - *prev_scalar;
                         out_offset += 4;
-                        out[flag_idx] |= 0b00000001 << (7 - (size - in_offset));
+                        out[flag_idx] |= 0b00000001 << (8 - (size - in_offset));
                     }
                     *prev_scalar = in[in_offset];
                 }
@@ -698,7 +698,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
             auto n_blocks = (size - 1) / 8;
             if (n_blocks) {
                 auto flag_size = (n_blocks + 1) / 2;
-                for (auto i = 0; i < flag_size + 1; i++) {
+                for (auto i = 0; i < flag_size + YMM_BYTE; i++) {
                     out[sizeof(uint32_t) + i] = 0; // 0fill: flags and first block
                 }
                 out_offset += flag_size; // for flags
@@ -746,7 +746,7 @@ inline uint32_t encode(uint32_t *in, uint64_t size, uint8_t *out) {
                         reinterpret_cast<uint32_t *>(out + out_offset)[0]
                             = in[in_offset] - *prev_scalar;
                         out_offset += 4;
-                        out[flag_idx] |= 0b00000001 << (7 - (size - in_offset));
+                        out[flag_idx] |= 0b00000001 << (8 - (size - in_offset));
                     }
                     *prev_scalar = in[in_offset];
                 }
