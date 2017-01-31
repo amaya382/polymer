@@ -71,22 +71,22 @@ volatile int global_toggle = 0;
 
 vertices *Frontier;
 
-template<class vertex>
 struct PR_F {
     double *p_curr, *p_next;
-    vertex *V;
+    //vertex *V;
     int rangeLow;
     int rangeHi;
+    intE *out_degrees;
 
-    PR_F(double *_p_curr, double *_p_next, vertex *_V, int _rangeLow, int _rangeHi) :
-            p_curr(_p_curr), p_next(_p_next), V(_V), rangeLow(_rangeLow), rangeHi(_rangeHi) {}
+    PR_F(double *_p_curr, double *_p_next, intE *_out_degrees, int _rangeLow, int _rangeHi) :
+            p_curr(_p_curr), p_next(_p_next), out_degrees(_out_degrees), rangeLow(_rangeLow), rangeHi(_rangeHi) {}
 
     inline void *nextPrefetchAddr(intT index) {
         return &p_curr[index];
     }
 
     inline bool update(intT s, intT d) { //update function applies PageRank equation
-        p_next[d] += p_curr[s] / V[s].getOutDegree();
+        p_next[d] += p_curr[s] / out_degrees[s];
         return 1;
     }
 
@@ -95,12 +95,12 @@ struct PR_F {
     }
 
     inline bool updateValVer(intT s, double val, intT d) {
-        writeAdd(&p_next[d], val / V[s].getOutDegree());
+        writeAdd(&p_next[d], val / out_degrees[s]);
         return true;
     }
 
     inline bool updateAtomic(intT s, intT d) { //atomic Update
-        writeAdd(&p_next[d], p_curr[s] / V[s].getOutDegree());
+        writeAdd(&p_next[d], p_curr[s] / out_degrees[s]);
         //return (p_curr[s] / V[s].getOutDegree()) >= 0;
         /*
         if (d == 110101) {
@@ -115,7 +115,7 @@ struct PR_F {
     }
 
     inline bool reduceFunc(void *dataPtr, intT s, bool print_info = false) {
-        *(double *) dataPtr += p_curr[s] / (double) V[s].getOutDegree();
+        *(double *) dataPtr += p_curr[s] / (double) out_degrees[s];
         if (print_info) {
             //cout << "reduce: " << s << " " << std::scientific << std::setprecision(9) << p_curr[s] / (double)V[s].getOutDegree() << " " << p_curr[s] << " " << V[s].getOutDegree() << *(double *)dataPtr << "\n";
         }
@@ -193,11 +193,10 @@ struct PR_subworker_arg {
     volatile int *toggle;
 };
 
-template<class F, class vertex>
-bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalFrontier *next,
+template<class F>
+bool *edgeMapDenseForwardOTHER(graph0 GA, vertices *frontier, F f, LocalFrontier *next,
                                intE *nghs, bool part = false, int start = 0, int end = 0) {
     intT numVertices = GA.n;
-    vertex *G = GA.V;
 
     int currNodeNum = 0;
     bool *currBitVector = frontier->getArr(currNodeNum);
@@ -238,17 +237,7 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
                 f.updateValVer(i, val, ngh);
             });
 #else
-            /*
-            auto d = G[i].getFakeDegree();
-            G[i].getOutNghs(nghs);
-            for (intE i = 0; i < d; i++) {
-//                if(f.cond(ngh[i]) && f.updateValVer(i, val, ngh[i])){
-//                    next->setBit(ngh[i], true);
-//                }
-                f.updateValVer(i, val, nghs[i]);
-            }
-            */
-            G[i].traverseOutNgh([&f, i, val](uintT ngh) {
+            GA.traverseOutNgh(i, [&f, i, val](uintT ngh) {
                 f.updateValVer(i, val, ngh);
             });
 #endif
@@ -257,10 +246,9 @@ bool *edgeMapDenseForwardOTHER(graph<vertex> GA, vertices *frontier, F f, LocalF
     return NULL;
 }
 
-template<class vertex>
 void *PageRankSubWorker(void *arg) {
     PR_subworker_arg *my_arg = (PR_subworker_arg *) arg;
-    graph<vertex> &GA = *(graph<vertex> *) my_arg->GA;
+    graph0 &GA = *(graph0 *)my_arg->GA;
     const intT n = GA.n;
     int maxIter = my_arg->maxIter;
     int tid = my_arg->tid;
@@ -334,7 +322,7 @@ void *PageRankSubWorker(void *arg) {
         struct timezone tz = {0, 0};
         gettimeofday(&startT, &tz);
         //edgeMapDenseForward(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, true, subworker.dense_start, subworker.dense_end);
-        edgeMapDenseForwardOTHER(GA, Frontier, PR_F<vertex>(p_curr, p_next, GA.V, rangeLow, rangeHi), output, nghs, true,
+        edgeMapDenseForwardOTHER(GA, Frontier, PR_F(p_curr, p_next, GA.out_degrees, rangeLow, rangeHi), output, nghs, true,
                                  subworker.dense_start, subworker.dense_end);
         //edgeMapDenseForwardDynamic(GA, Frontier, PR_F<vertex>(p_curr,p_next,GA.V,rangeLow,rangeHi),output, subworker);
         gettimeofday(&midT, &tz);
@@ -391,10 +379,9 @@ void *PageRankSubWorker(void *arg) {
 
 pthread_barrier_t timerBarr;
 
-template<class vertex>
 void *PageRankThread(void *arg) {
     PR_worker_arg *my_arg = (PR_worker_arg *) arg;
-    graph<vertex> &GA = *(graph<vertex> *) my_arg->GA;
+    graph0 &GA = *(graph0 *) my_arg->GA;
     int maxIter = my_arg->maxIter;
     int tid = my_arg->tid;
 
@@ -412,12 +399,11 @@ void *PageRankThread(void *arg) {
     pthread_barrier_wait(&barr);
     intT degreeSum = 0;
     for (intT i = rangeLow; i < rangeHi; i++) {
-        degreeSum += GA.V[i].getInDegree();
+        degreeSum += GA.in_degrees[i];
     }
     cerr << to_string(tid) + " : degree count: " + to_string(degreeSum) + "\n";
 
-    //graph<vertex> localGraph = graphFilter(GA, rangeLow, rangeHi);
-    graph<vertex> localGraph = graphFilter2Direction(GA, rangeLow, rangeHi);
+    graph0 localGraph = graphFilter2Direction0(GA, rangeLow, rangeHi);
 
     pthread_barrier_wait(&barr);
     if (tid == 0)
@@ -526,7 +512,7 @@ void *PageRankThread(void *arg) {
         arg->endPos = startPos + sizeOfShards[i];
         startPos = arg->endPos;
 
-        pthread_create(&subTids[i], NULL, PageRankSubWorker<vertex>, (void *) arg);
+        pthread_create(&subTids[i], NULL, PageRankSubWorker, (void *) arg);
     }
 
     pthread_barrier_wait(&barr);
@@ -595,8 +581,7 @@ struct PR_Hash_F {
     }
 };
 
-template<class vertex>
-tuple<SystemCounterState, SystemCounterState> PageRank(graph<vertex> &GA, int maxIter) {
+tuple<SystemCounterState, SystemCounterState> PageRank(graph0 &GA, int maxIter) {
     N_NODES = numa_num_configured_nodes();
     N_CORES_PER_NODE = numa_num_configured_cpus() / N_NODES;
 
@@ -613,7 +598,7 @@ tuple<SystemCounterState, SystemCounterState> PageRank(graph<vertex> &GA, int ma
     PR_Hash_F hasher(GA.n, N_USE_NODES);
     //graphHasher(GA, hasher);
     //graphAllEdgeHasher(GA, hasher);
-    partitionByDegree(GA, N_USE_NODES, sizeArr, sizeof(double));
+    partitionByDegree0(GA, N_USE_NODES, sizeArr, sizeof(double));
     /*
     intT vertPerPage = PAGESIZE / sizeof(double);
     intT subShardSize = ((GA.n / numOfNode) / vertPerPage) * vertPerPage;
@@ -626,7 +611,7 @@ tuple<SystemCounterState, SystemCounterState> PageRank(graph<vertex> &GA, int ma
     for (int i = 0; i < N_USE_NODES; i++) {
         intT degreeSum = 0;
         for (intT j = accum; j < accum + sizeArr[i]; j++) {
-            degreeSum += GA.V[j].getInDegree();
+            degreeSum += GA.in_degrees[j];
         }
         cerr << to_string(i) + ": degree sum: " + to_string(degreeSum) + "\n";
         accum += sizeArr[i];
@@ -649,7 +634,7 @@ tuple<SystemCounterState, SystemCounterState> PageRank(graph<vertex> &GA, int ma
         arg->rangeHi = prev + sizeArr[i];
         prev = prev + sizeArr[i];
 
-        pthread_create(&tids[i], NULL, PageRankThread<vertex>, (void *) arg);
+        pthread_create(&tids[i], NULL, PageRankThread, (void *) arg);
     }
     shouldStart = 1;
 
@@ -703,8 +688,9 @@ int parallel_main(int argc, char *argv[]) {
 //        PageRank(G, maxIter);
         //G.del();
     } else {
-        graph<asymmetricVertex> G =
-                readGraph<asymmetricVertex>(iFile, symmetric, binary);
+        //graph<asymmetricVertex> G =
+                //readGraph<asymmetricVertex>(iFile, symmetric, binary);
+        graph0 G = readGraphFromFile0(iFile, symmetric);
 
         auto tup = PageRank(G, maxIter);
         auto mid = get<0>(tup);

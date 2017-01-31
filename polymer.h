@@ -43,6 +43,7 @@
 
 #include <algorithm>
 #include <immintrin.h>
+#include <random>
 
 using namespace std;
 
@@ -199,6 +200,70 @@ void partitionByDegree(graph<vertex> GA, int numOfShards, int *sizeArr, int size
     free(degrees);
 }
 
+void partitionByDegree0(graph0 GA, int numOfShards, int *sizeArr, int sizeOfOneEle, bool useOutDegree = false) {
+    const intT n = GA.n;
+    int *degrees = newA(int, n);
+
+    int shardSize = n / numOfShards;
+
+    if (useOutDegree) {
+        { parallel_for(intT i = 0; i < n; i++) degrees[i] = GA.out_degrees[i]; }
+    }
+    else {
+        { parallel_for(intT i = 0; i < n; i++) degrees[i] = GA.in_degrees[i]; }
+    }
+
+    int accum[numOfShards];
+    for (int i = 0; i < numOfShards; i++) {
+        accum[i] = 0;
+        sizeArr[i] = 0;
+    }
+
+    long totalDegree = 0;
+    for (intT i = 0; i < n; i++) {
+        totalDegree += degrees[i];
+    }
+
+    int averageDegree = totalDegree / numOfShards;
+    cerr << "average is " + to_string(averageDegree) + "\n";
+    int counter = 0;
+    int tmpSizeCounter = 0;
+    for (intT i = 0; i < n; i += PAGESIZE / sizeOfOneEle) {
+        int localAccum = 0;
+        int localSize = 0;
+        for (intT j = 0; j < PAGESIZE / sizeOfOneEle; j++) {
+            if (i + j >= n)
+                break;
+            //accum[counter] += degrees[i + j];
+            //sizeArr[counter]++;
+            localAccum += degrees[i + j];
+            localSize++;
+            tmpSizeCounter++;
+        }
+        accum[counter] += localAccum;
+        sizeArr[counter] += localSize;
+        if (accum[counter] >= averageDegree && counter < numOfShards - 1) {
+            int oldDiff = averageDegree - (accum[counter] - localAccum);
+            int newDiff = accum[counter] - averageDegree;
+            if (oldDiff < newDiff) {
+                accum[counter] -= localAccum;
+                sizeArr[counter] -= localSize;
+            }
+            else {
+                localAccum = 0;
+                localSize = 0;
+            }
+            counter++;
+            accum[counter] += localAccum;
+            sizeArr[counter] += localSize;
+            //cout << tmpSizeCounter / (double)(PAGESIZE / sizeOfOneEle) << endl;
+            tmpSizeCounter = 0;
+        }
+    }
+
+    free(degrees);
+}
+
 template<class vertex>
 void subPartitionByDegree(graph<vertex> GA, int numOfShards, int *sizeArr, int sizeOfOneEle, bool useOutDegree = false,
                           bool useFakeDegree = false) {
@@ -214,6 +279,53 @@ void subPartitionByDegree(graph<vertex> GA, int numOfShards, int *sizeArr, int s
             { parallel_for (intT i = 0; i < n; i++) degrees[i] = GA.V[i].getOutDegree(); }
         } else {
             { parallel_for (intT i = 0; i < n; i++) degrees[i] = GA.V[i].getInDegree(); }
+        }
+    }
+
+    int accum[numOfShards];
+    for (int i = 0; i < numOfShards; i++) {
+        accum[i] = 0;
+        sizeArr[i] = 0;
+    }
+
+    long totalDegree = 0;
+    for (intT i = 0; i < n; i++) {
+        totalDegree += degrees[i];
+    }
+
+    int averageDegree = totalDegree / numOfShards;
+    int counter = 0;
+    int tmpSizeCounter = 0;
+    for (intT i = 0; i < n; i++) {
+        accum[counter] += degrees[i];
+        sizeArr[counter]++;
+        tmpSizeCounter++;
+        if (accum[counter] >= averageDegree && counter < numOfShards - 1) {
+            counter++;
+            //cout << tmpSizeCounter / (double)(PAGESIZE / sizeOfOneEle) << endl;
+            tmpSizeCounter = 0;
+        }
+    }
+
+    free(degrees);
+}
+
+void subPartitionByDegree(graph0 GA, int numOfShards, int *sizeArr, int sizeOfOneEle, bool useOutDegree = false,
+    bool useFakeDegree = false) {
+    const intT n = GA.n;
+    int *degrees = newA(int, n);
+
+    int shardSize = n / numOfShards;
+
+    if (useFakeDegree) {
+        { parallel_for(intT i = 0; i < n; i++) degrees[i] = GA.out_fake_degrees[i]; }
+    }
+    else {
+        if (useOutDegree) {
+            { parallel_for(intT i = 0; i < n; i++) degrees[i] = GA.out_degrees[i]; }
+        }
+        else {
+            { parallel_for(intT i = 0; i < n; i++) degrees[i] = GA.in_degrees[i]; }
         }
     }
 
@@ -881,6 +993,100 @@ graph<vertex> graphFilter2Direction(graph<vertex> &GA, int rangeLow, int rangeHi
     numa_free(in_buf, sizeof(intE) * max_in_degree);
 
     return graph<vertex>(newVertexSet, GA.n, GA.m);
+}
+
+// create local graph (repack edges only in current node)
+graph0 graphFilter2Direction0(graph0 &GA, int rangeLow, int rangeHi) {
+    auto out_degrees = (intE *)numa_alloc_local(sizeof(intE) * GA.n);
+    auto out_fake_degrees = (intE *)numa_alloc_local(sizeof(intE) * GA.n);
+    //auto out_nghs = (intE **)numa_alloc_local(sizeof(intE) * GA.n);
+    auto in_degrees = (intE *)numa_alloc_local(sizeof(intE) * GA.n);
+    auto in_fake_degrees = (intE *)numa_alloc_local(sizeof(intE) * GA.n);
+    //auto in_nghs = (intE **)numa_alloc_local(sizeof(intE) * GA.n);
+    auto out_bufs = (uint8_t **)numa_alloc_local(sizeof(uint8_t **) * GA.n);
+    auto in_bufs = (uint8_t **)numa_alloc_local(sizeof(uint8_t **) * GA.n);
+
+    int *counters = (int *)numa_alloc_local(sizeof(int) * GA.n);
+    int *inCounters = (int *)numa_alloc_local(sizeof(int) * GA.n);
+    {
+        parallel_for(intT i = 0; i < GA.n; i++) {
+            out_degrees[i] = GA.out_degrees[i];
+            in_degrees[i] = GA.in_degrees[i];
+
+            intT d = GA.out_degrees[i];
+            counters[i] = 0;
+            intT out_ngh = 0;
+            for (intT j = 0; j < d; j++) {
+                out_ngh += GA.out_nghs[i][j];
+                if (rangeLow <= out_ngh && out_ngh < rangeHi)
+                    counters[i]++;
+            }
+            out_fake_degrees[i] = counters[i];
+
+            d = GA.in_degrees[i];
+            inCounters[i] = 0;
+            intT in_ngh = 0;
+            for (intT j = 0; j < d; j++) {
+                in_ngh += GA.in_nghs[i][j];
+                if (rangeLow <= in_ngh && in_ngh < rangeHi)
+                    inCounters[i]++;
+            }
+            in_fake_degrees[i] = inCounters[i];
+        }
+    }
+
+    intT totalSize = 0;
+    intT totalInSize = 0;
+    for (intT i = 0; i < GA.n; i++) {
+        totalSize += counters[i];
+        totalInSize += inCounters[i];
+    }
+
+    intT max_out_degree = *max_element(counters, counters + GA.n);
+    intT max_in_degree = *max_element(inCounters, inCounters + GA.n);
+    intE *out_buf = (intE *)numa_alloc_local(sizeof(intE) * max_out_degree); // expected max
+    intE *in_buf = (intE *)numa_alloc_local(sizeof(intE) * max_in_degree); // expected max
+
+    uint8_t *out_edges = (uint8_t *)numa_alloc_local(sizeof(intE) * totalSize); // extra
+    uint8_t *in_edges = (uint8_t *)numa_alloc_local(sizeof(intE) * totalInSize); // extra
+
+    uint64_t out_consumed = 0; // byte
+    uint64_t in_consumed = 0; // byte
+    for (intT i = 0; i < GA.n; i++) {
+        intT out_degree = GA.out_degrees[i];
+        intT out_ngh = 0;
+        intT out_counter = 0;
+        for (intT j = 0; j < out_degree; j++) {
+            out_ngh += GA.out_nghs[i][j];
+            if (rangeLow <= out_ngh && out_ngh < rangeHi) {
+                out_buf[out_counter++] = out_ngh;
+            }
+        }
+        uint64_t out_used = encode(out_buf, out_counter, &out_edges[out_consumed]);
+        out_bufs[i] = &out_edges[out_consumed];
+        out_consumed += out_used;
+
+        intT in_degree = GA.in_degrees[i];
+        intT in_ngh = 0;
+        intT in_counter = 0;
+        for (intT j = 0; j < in_degree; j++) {
+            in_ngh += GA.in_nghs[i][j];
+            if (rangeLow <= in_ngh && in_ngh < rangeHi) {
+                in_buf[in_counter++] = in_ngh;
+            }
+        }
+        uint64_t in_used = encode(in_buf, in_counter, &in_edges[in_consumed]);
+        in_bufs[i] = &in_edges[in_consumed];
+        in_consumed += in_used;
+    }
+
+    numa_free(counters, sizeof(int) * GA.n);
+    numa_free(inCounters, sizeof(int) * GA.n);
+    numa_free(out_buf, sizeof(intE) * max_out_degree);
+    numa_free(in_buf, sizeof(intE) * max_in_degree);
+
+    return graph0(out_degrees, /*out_nghs,*/ out_fake_degrees,
+        in_degrees, /*in_nghs,*/ in_fake_degrees, out_bufs, in_bufs, GA.n, GA.m);
 }
 
 void *mapDataArray(int numOfShards, int *sizeArr, int sizeOfOneEle) {
