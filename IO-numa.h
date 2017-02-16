@@ -229,12 +229,12 @@ graph0 readGraphFromFile0(char *fname, bool isSymmetric) {
     auto in_degrees = newA(intE, n);
     auto in_nghs = newA(intE *, n);
 
-    std::vector <intT> out_offsets(n);
-    std::vector <intE> out_edges(m);
-    auto out_gap_edges = newA(intE, m);
+    auto out_offsets = newA(intT, n);
+    auto out_edges = newA(intE, m);
 
     std::vector < std::tuple < std::vector < intE >, std::mutex >> listed_in_edges(n);
-    auto in_gap_edges = newA(intE, m);
+    auto in_offsets = newA(intT, n);
+    auto in_edges = newA(intE, m);
 
     auto add_in_edges = [&](intE from, intE to) {
         std::lock_guard <std::mutex> lock(std::get<1>(listed_in_edges[to]));
@@ -242,27 +242,17 @@ graph0 readGraphFromFile0(char *fname, bool isSymmetric) {
     };
 
     { parallel_for(long i = 0; i < n; i++) out_offsets[i] = atol(W.Strings[i + 3]); }
-
-    const int skip_lines = 3;
-    auto get_and_memo_edge = [&](intE i) {
-        return out_edges[i] = atol(W.Strings[skip_lines + n + i]);
-    };
-    parallel_for(long i = 0; i < n; i++) {
-        auto offset = out_offsets[i];
-        auto upper = (i != n - 1) ? out_offsets[i + 1] : m;
-        auto degree = upper - offset;
-
-        if (degree > 0) {
-            out_gap_edges[offset] = get_and_memo_edge(offset);
-            add_in_edges(i, out_edges[offset]);
+    { parallel_for(long i = 0; i < m; i++) out_edges[i] = atol(W.Strings[i + n + 3]); }
+    {
+      parallel_for (uintT i = 0; i < n; i++) {
+        uintT o = out_offsets[i];
+        uintT l = ((i == n - 1) ? m : out_offsets[i + 1]) - o;
+        out_degrees[i] = l;
+        out_nghs[i] = out_edges + o;
+        for(auto j = 0ul; j < l; j++) {
+          add_in_edges(i, out_nghs[i][j]);
         }
-
-        out_degrees[i] = degree;
-        out_nghs[i] = out_gap_edges + offset;
-        for (long j = offset + 1; j < upper; j++) {
-            out_gap_edges[j] = get_and_memo_edge(j) - out_edges[j - 1];
-            add_in_edges(i, out_edges[j]);
-        }
+      }
     }
 
     parallel_for(long i = 0; i < n; i++) {
@@ -271,21 +261,22 @@ graph0 readGraphFromFile0(char *fname, bool isSymmetric) {
         in_degrees[i] = edges.size();
     }
 
-    long offset = 0;
+    in_offsets[0] = 0;
     for (long i = 0; i < n; i++) {
         auto edges = std::get<0>(listed_in_edges[i]);
         auto size = edges.size();
-        in_nghs[i] = in_gap_edges + offset;
-        long prev = 0;
-        for (int j = 0; j < size; j++) {
-            in_gap_edges[offset + j] = edges[j] - prev;
-            prev = edges[j];
+        if (i < n - 1) {
+          in_offsets[i + 1] = in_offsets[i] + size;
         }
-        offset += size;
+        in_nghs[i] = in_edges + in_offsets[i];
+        if (size > 0u) {
+          copy(edges.data(), edges.data() + size, in_edges + in_offsets[i]);
+        }
     }
 
+    // TODO: add `out_offsets` and `in_offsets`
     return graph0(out_degrees, out_nghs, in_degrees, in_nghs,
-        (intT)n, m, out_gap_edges, in_gap_edges);
+        (intT)n, m, out_edges, in_edges);
 }
 
 template<class vertex>

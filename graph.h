@@ -8,6 +8,8 @@
 #include <functional>
 #include <immintrin.h>
 
+#include "integerlist-utils/compress/ordered/multiple/decode.hpp"
+
 using namespace std;
 
 // **************************************************************
@@ -493,20 +495,33 @@ struct graph {
 };
 
 struct graph0 {
+    // degree
     intE *out_degrees;
-    intE **out_nghs;
-    intE *out_fake_degrees;
     intE *in_degrees;
-    intE **in_nghs;
+
+    // numa-local degree
+    intE *out_fake_degrees;
     intE *in_fake_degrees;
 
-    uint8_t **out_bufs;
-    uint8_t **in_bufs;
+    // offsets for substance
+    intE *out_offsets;
+    intE *in_offsets;
+
+    // substance
+    intE *allocatedInplace;
+    intE *inEdges;
+
+    // point at start address
+    intE **out_nghs;
+    intE **in_nghs;
+
+    // compressed substance
+    uint8_t *out_cmped;
+    uint8_t *in_cmped;
 
     intT n;
     uintT m;
-    intE *allocatedInplace;
-    intE *inEdges;
+
     intT *flags;
 
     graph0(intE *_out_degrees, intE **_out_nghs, intE *_in_degrees, intE **_in_nghs,
@@ -515,15 +530,19 @@ struct graph0 {
         in_degrees(_in_degrees), in_nghs(_in_nghs),
         n(nn), m(mm), allocatedInplace(NULL), flags(NULL) {}
 
-    graph0(intE *_out_degrees, /*intE **_out_nghs,*/ intE *_out_fake_degrees,
-        intE *_in_degrees, /*intE **_in_nghs,*/ intE *_in_fake_degrees,
-        uint8_t **_out_bufs, uint8_t **_in_bufs, intT nn, uintT mm)
-        : out_degrees(_out_degrees), /*out_nghs(_out_nghs),*/
-        out_fake_degrees(_out_fake_degrees), in_degrees(_in_degrees),
-        /*in_nghs(_in_nghs),*/ in_fake_degrees(_in_fake_degrees),
-        out_bufs(_out_bufs), in_bufs(_in_bufs),
+    // polymer (numa-local subgraph)[compressed]
+    graph0(intE *_out_degrees, intE *_out_fake_degrees,
+        intE *_in_degrees, intE *_in_fake_degrees,
+           intE *_out_offsets, intE *_in_offsets,
+        uint8_t *_out_cmped, uint8_t *_in_cmped,
+           intT nn, uintT mm)
+        : out_degrees(_out_degrees), out_fake_degrees(_out_fake_degrees),
+          in_degrees(_in_degrees), in_fake_degrees(_in_fake_degrees),
+          out_offsets(_out_offsets), in_offsets(_in_offsets),
+          out_cmped(_out_cmped), in_cmped(_in_cmped),
         n(nn), m(mm), allocatedInplace(NULL), flags(NULL) {}
 
+    // IO-numa (whole graph)
     graph0(intE *_out_degrees, intE **_out_nghs, intE *_in_degrees, intE **_in_nghs,
         intT nn, uintT mm, intE *ai, intE *_inEdges = NULL)
         : out_degrees(_out_degrees), out_nghs(_out_nghs),
@@ -534,95 +553,9 @@ struct graph0 {
         if (flags != NULL) free(flags);
     }
 
-    inline __m256i unpack(uint8_t *packed, uint8_t pack_size, uint8_t n_used_bits) {
-        auto _packed = reinterpret_cast<uint32_t *>(packed);
-        auto data = _mm256_srli_epi32(
-            _mm256_loadu_si256(reinterpret_cast<__m256i *>(_packed)), n_used_bits);
-
-        if (n_used_bits + pack_size > BIT_PER_BOX) {
-            alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T * 2 - n_used_bits - pack_size) };
-            auto masked = _mm256_and_si256(
-                _mm256_loadu_si256(reinterpret_cast<__m256i *>(_packed + LENGTH)),
-                _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
-            data = _mm256_or_si256(data,
-                _mm256_slli_epi32(masked, BITSIZEOF_T - n_used_bits));
-        }
-        else {
-            alignas(256) uint32_t mask[1] = { 0xFFFFFFFFu >> (BITSIZEOF_T - pack_size) };
-            data = _mm256_and_si256(data,
-                _mm256_broadcastd_epi32(_mm_load_si128(reinterpret_cast<__m128i *>(mask))));
-        }
-
-        return data;
-    }
-
     template<typename Func>
-    inline void traverseOutNgh(uintT i, Func f) {
-        auto fakeOutDegree = out_fake_degrees[i];
-        if (fakeOutDegree > 0) {
-            auto out = out_bufs[i];
-            auto ref_offset = 0;
-            auto out_offset = 0;
-            auto head = reinterpret_cast<uint32_t *>(out)[0];
-            uint32_t prev_scalar[1] = { head };
-            f(head);
-            ref_offset++;
-            out_offset += sizeof(uint32_t);
-            if (fakeOutDegree > 1) {
-                auto n_blocks = (fakeOutDegree - 1) / 8;
-
-                if (n_blocks) {
-                    out_offset += (n_blocks + 1) / 2; // for flags
-
-                    auto n_used_bits = 0;
-                    auto prev = _mm256_broadcastd_epi32(
-                        _mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
-                    alignas(256) uint32_t xs[8];
-                    for (auto i = 0; i < n_blocks; i++) {
-                        auto s = ((out[sizeof(uint32_t) + (i / 2)] >> (i % 2) * 4) & 0b00001111) * 2;
-                        auto curr = unpack(out + out_offset, s, n_used_bits);
-                        _mm256_storeu_si256(reinterpret_cast<__m256i *>(xs),
-                            _mm256_add_epi32(prev, curr));
-                        for (auto j = 0; j < 8; j++) {
-                            f(xs[j]);
-                        }
-
-                        n_used_bits += s;
-                        ref_offset += 8;
-                        if (n_used_bits > BIT_PER_BOX && s > 0) {
-                            out_offset += YMM_BYTE;
-                            n_used_bits -= BIT_PER_BOX;
-                        }
-                        *prev_scalar = xs[7];
-                        prev = _mm256_broadcastd_epi32(
-                            _mm_load_si128(reinterpret_cast<__m128i *>(prev_scalar)));
-                    }
-
-                    if (n_used_bits > 0) {
-                        out_offset += YMM_BYTE;
-                    }
-                }
-
-                if (fakeOutDegree - ref_offset > 0) {
-                    auto flag_idx = out_offset;
-                    out_offset++;
-                    for (; ref_offset < fakeOutDegree; ref_offset++) {
-                        if (out[flag_idx] >> (8 - (fakeOutDegree - ref_offset)) & 0b00000001) {
-                            *prev_scalar += reinterpret_cast<uint32_t *>(out + out_offset)[0];
-                            out_offset += 4;
-                        }
-                        else {
-                            *prev_scalar += reinterpret_cast<uint16_t *>(out + out_offset)[0];
-                            out_offset += 2;
-                        }
-                        f(*prev_scalar);
-                    }
-                }
-            }
-        }
-        else {
-            return;
-        }
+    inline void map_out_nghs(uintT i, Func f){
+        traverse0(out_cmped, n, f, nullptr, out_offsets);
     }
 };
 

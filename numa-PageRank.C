@@ -219,6 +219,13 @@ bool *edgeMapDenseForwardOTHER(graph0 GA, vertices *frontier, F f, LocalFrontier
         currOffset = frontier->getOffset(currNodeNum);
     }
 
+    GA.map_out_nghs(i, [&f, i, val](uintT ngh, uintT curr, uintT idx) {
+      if(startPos <= curr && curr < endPos) {
+        f.updateValVer(i, val, ngh);
+      }
+    });
+
+  /*
     for (long i = startPos; i < endPos; i++) {
         if (i == nextSwitchPoint) {
             currOffset += frontier->getSize(currNodeNum);
@@ -230,7 +237,7 @@ bool *edgeMapDenseForwardOTHER(graph0 GA, vertices *frontier, F f, LocalFrontier
         if (currBitVector[i - currOffset]) {
             auto val = f.getCurrVal(i);
 #if TYPE < 5
-            G[i].traverseOutNgh([&f, /*&next,*/ i, val](uintT ngh) {
+            G[i].traverseOutNgh([&f, &next, i, val](uintT ngh) {
 //                if(f.cond(ngh) && f.updateValVer(i, val, ngh)){
 //                    next->setBit(ngh, true);
 //                }
@@ -243,6 +250,7 @@ bool *edgeMapDenseForwardOTHER(graph0 GA, vertices *frontier, F f, LocalFrontier
 #endif
         }
     }
+    */
     return NULL;
 }
 
@@ -393,6 +401,7 @@ void *PageRankThread(void *arg) {
     int rangeLow = my_arg->rangeLow;
     int rangeHi = my_arg->rangeHi;
 
+    /*
     if (tid == 0) {
         //printf("average is: %lf\n", GA.m / (float) (my_arg->numOfNode));
     }
@@ -402,6 +411,7 @@ void *PageRankThread(void *arg) {
         degreeSum += GA.in_degrees[i];
     }
     cerr << to_string(tid) + " : degree count: " + to_string(degreeSum) + "\n";
+    */
 
     graph0 localGraph = graphFilter2Direction0(GA, rangeLow, rangeHi);
 
@@ -607,6 +617,7 @@ tuple<SystemCounterState, SystemCounterState> PageRank(graph0 &GA, int maxIter) 
     }
     sizeArr[numOfNode - 1] = GA.n - subShardSize * (numOfNode - 1);
     */
+    /*
     int accum = 0;
     for (int i = 0; i < N_USE_NODES; i++) {
         intT degreeSum = 0;
@@ -616,6 +627,7 @@ tuple<SystemCounterState, SystemCounterState> PageRank(graph0 &GA, int maxIter) 
         cerr << to_string(i) + ": degree sum: " + to_string(degreeSum) + "\n";
         accum += sizeArr[i];
     }
+    */
     //return;
 
     p_curr_global = (double *) mapDataArray(N_USE_NODES, sizeArr, sizeof(double));
