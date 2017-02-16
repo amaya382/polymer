@@ -37,7 +37,8 @@ MYAPPS=numa-PageRank
 MYHEADER= ligra-rewrite.h ligra-numa.h
 LIBS_I_NEED= -pthread -lnuma
 
-all: $(ALL) $(MYAPPS)
+all: $(MYAPPS)
+#all: $(ALL) $(MYAPPS)
 
 debug: PCFLAGS = -fcilkplus -lcilkrts -O0 -g -DCILK $(INTT) $(INTE)
 debug: all
