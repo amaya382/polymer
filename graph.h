@@ -72,13 +72,6 @@ inline void decode(uint8_t *in, uint64_t size, uint_t *out) {
     }
 }
 
-constexpr auto BIT_PER_BYTE = 8;
-constexpr auto YMM_BIT = 256;
-constexpr auto YMM_BYTE = YMM_BIT / BIT_PER_BYTE;
-constexpr auto BITSIZEOF_T = sizeof(uint32_t) * BIT_PER_BYTE;
-constexpr auto LENGTH = YMM_BIT / BITSIZEOF_T;
-constexpr auto BIT_PER_BOX = YMM_BIT / LENGTH;
-
 struct asymmetricVertex {
     intE *inNeighbors;
     intE *outNeighbors;
@@ -554,7 +547,7 @@ struct graph0 {
     }
 
     template<typename Func>
-    inline void map_out_nghs(uintT i, Func f){
+    inline void map_out_nghs(Func f){
         traverse0(out_cmped, n, f, nullptr, out_offsets);
     }
 };

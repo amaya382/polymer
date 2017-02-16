@@ -35,7 +35,7 @@
 #include <sched.h>
 #include <string>
 
-#include "cpucounters.h"
+#include "pcm/cpucounters.h"
 
 //#include <papi.h>
 #define NUM_EVENTS 3
@@ -219,9 +219,9 @@ bool *edgeMapDenseForwardOTHER(graph0 GA, vertices *frontier, F f, LocalFrontier
         currOffset = frontier->getOffset(currNodeNum);
     }
 
-    GA.map_out_nghs(i, [&f, i, val](uintT ngh, uintT curr, uintT idx) {
+    GA.map_out_nghs([&f, startPos, endPos](uintT ngh, uintT curr, uintT idx) {
       if(startPos <= curr && curr < endPos) {
-        f.updateValVer(i, val, ngh);
+        f.updateValVer(curr, f.getCurrVal(curr), ngh);
       }
     });
 

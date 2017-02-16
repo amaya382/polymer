@@ -204,7 +204,7 @@ void partitionByDegree(graph<vertex> GA, int numOfShards, int *sizeArr, int size
 
 void partitionByDegree0(graph0 GA, int numOfShards, int *sizeArr, int sizeOfOneEle, bool useOutDegree = false) {
     const intT n = GA.n;
-    int *degrees;
+    intE *degrees;
 
     int shardSize = n / numOfShards;
 
