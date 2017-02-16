@@ -483,8 +483,8 @@ void *PageRankThread(void *arg) {
 
     pthread_t subTids[N_USE_CORES_PER_NODE];
 
-    volatile int local_custom_counter;
-    volatile int local_toggle;
+    volatile int local_custom_counter = 0;
+    volatile int local_toggle = 0;
 
     for (int i = 0; i < N_USE_CORES_PER_NODE; i++) {
         PR_subworker_arg *arg = (PR_subworker_arg *) malloc(sizeof(PR_subworker_arg));
