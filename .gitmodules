@@ -1,0 +1,6 @@
+[submodule "pcm"]
+	path = pcm
+	url = https://github.com/opcm/pcm.git
+[submodule "integerlist-utils"]
+	path = integerlist-utils
+	url = git@github.com:amaya382/integerlist-utils.git
